@@ -1,1 +1,6 @@
-TODO: Actually make this run from the command line and not just from an ide
+Evoke from the command line with the following command(I am trying to fingure out how to set these internally. For now I've been aliasing. 
+Example uses Pong.asm as an arbirtary assembly file 
+
+$-java javaagent:/snap/intellij-idea-community/390/lib/idea_rt.jar=41355:/snap/intellij-idea-community/390/bin -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -classpath $CLASSPATH HackAssembler Pong.asm
+
+The current biggest issue seems to be that the java command and javaagent need to be set seperately. It can also be really easily evoked from an ide, but that's less than useful
