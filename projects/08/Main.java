@@ -16,6 +16,7 @@ public class Main {
 
         Path path = Path.of(args[0]);
 
+        //checks if the user input is a directory or single file and uses the appropriate logic
         if((Files.isDirectory(path))){
             writer = new CodeWriter(path.getFileName().toString());
             //Sys.init
@@ -23,7 +24,7 @@ public class Main {
             //loop through valid vm files
             openDir(path);
         } else {
-            //Emergency use case for being directed to a single .vm file. Will compile but not run
+            //rather than creating the filename string twice to trim the file type a variable is created
             String filename = path.getFileName().toString();
             writer = new CodeWriter(filename.substring(0,filename.lastIndexOf('.')));
             writeToFile(path.toString());
@@ -33,6 +34,7 @@ public class Main {
         writer.close();
     }
 
+    //recursively searches for the Sys.vm file to initiate our assembly
     private static Path getInit(Path dir) throws IOException {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path file: stream) {
@@ -42,12 +44,13 @@ public class Main {
                     return file;
                 }
             }
-        } catch (IOException | DirectoryIteratorException x) {
-            System.err.println(x);
+        } catch (IOException | DirectoryIteratorException directoryError) {
+            System.err.println(directoryError);
         }
         return null;
     }
 
+    //opens every folder and reads in all valid files
     private static void openDir(Path dir) throws IOException{
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path file: stream) {
@@ -65,6 +68,7 @@ public class Main {
         }
     }
 
+    //writes a given file to the created file
     private static void writeToFile(String inFile) throws FileNotFoundException {
         writer.setCurrentFile(inFile.substring(1+inFile.lastIndexOf('\\'), inFile.lastIndexOf('.')).toUpperCase());
 

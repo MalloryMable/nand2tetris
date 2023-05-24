@@ -3,6 +3,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
+/*
+ *  Made the call to hard code the flow of the way this writes rather than breaking out string pointer
+ *  movement because while usages are similar. Very few are identical and breaking them out takes about
+ *  the same number of lines and makes this whole program less readable
+*/
+
 public class CodeWriter {
     private final PrintWriter printWriter;
     private final ArrayList<String> functions = new ArrayList<>();
@@ -39,7 +45,7 @@ public class CodeWriter {
                     case ("OR") -> printWriter.println("M=M|D");
                     default -> {
                         printWriter.println("D=M-D");//Comparisons always do subtraction
-                        printWriter.println(fullAtLabel("false"+ifCounter));//TODO: label!
+                        printWriter.println(fullAtLabel("false"+ifCounter));
                         switch (command) {
                             case ("EQ") -> printWriter.println("D;JEQ");
                             case ("GT") -> printWriter.println("D;JGT");
@@ -47,9 +53,8 @@ public class CodeWriter {
                         }
                         //NOTE: these labels don't come from a vm file so will never collide in name space
                         printWriter.println("D=0"); // true
-                        printWriter.println(fullAtLabel("end" + ifCounter)); //TODO: Label!
+                        printWriter.println(fullAtLabel("end" + ifCounter));
                         unconditionalJump(); //skip
-                        //TODO: possible bad labels
                         writeLabel("$false"+ifCounter); // increments counter on last call
                         printWriter.println("D=-1"); // false
                         writeLabel("$end"+ifCounter++); // used to skip setting D to false, NOTE: if incrementation
@@ -62,11 +67,11 @@ public class CodeWriter {
     }
 
     //writes a valid assembly label(it's fine that it's all upper case and looks funky)
-    public void writeLabel(String label) {printWriter.printf("(%s$%s)\n", currentFunction, label);} //TODO: label!
+    public void writeLabel(String label) {printWriter.printf("(%s)\n", label);}
 
     //writes the assembly to go to a given label
     public void writeGoto(String label) {
-        printWriter.println(fullAtLabel(label)); //TODO: label!
+        printWriter.println(fullAtLabel(label));
         unconditionalJump();
     }
 
@@ -74,7 +79,7 @@ public class CodeWriter {
     public void writeIf(String label) {
         followDecrementedStackPointer();
         dataFromMemory();
-        printWriter.println(fullAtLabel(label)); //TODO: label!
+        printWriter.println(fullAtLabel(label));
         printWriter.println("D;JEQ");
     }
 
@@ -85,11 +90,12 @@ public class CodeWriter {
          *is better than extra lines of assembly
          *only flags constants as false*/
 
+        //TODO: Offset may need to be corrected to be above predefined addresses
         switch (segment) {
 
             case "CONSTANT" -> {
                 memorySave = false; //a special control flow for pushing constants
-                printWriter.println('@' + offset);
+                printWriter.println("@" + offset);
             }
 
             case "POINTER" -> printWriter.println('@' + (offset + 3));
@@ -135,7 +141,7 @@ public class CodeWriter {
         int index = (functions.indexOf(currentFunction));
 
         functionCallCount.set(index, 1+functionCallCount.get(index));
-        printWriter.println(fullAtLabel(String.valueOf(functionCallCount.get(index))));
+        printWriter.println('@' + (String.valueOf(functionCallCount.get(index))));
         dataFromAddress();
         followStackPointer();
         memoryToData();
@@ -157,13 +163,15 @@ public class CodeWriter {
         printWriter.println(predefinedSymbols[1]);
         memoryToData();
 
-        writeGoto(currentFunction);
+        //we cannot use traditional goTo because of the unconventional at
+        printWriter.println('@'+ currentFunction);
+        unconditionalJump();
     }
 
+    //writes the assembly to define aa function to file
     public void writeFunction(String function, int varCount){
         functionCheck(function);
-        writeLabel( function);
-
+        writeLabel(function);
         followStackPointer();
         for(int m = 0; m < varCount; m++){
             printWriter.println("M=0"); //saves empty values
@@ -202,6 +210,7 @@ public class CodeWriter {
             atFrame();
             followDecrementedPointer();
             dataFromMemory();
+            printWriter.println("Predefined Symbols");
             printWriter.println(predefinedSymbols[i]); //moves through list backwards
             memoryToData();
         }
@@ -246,21 +255,25 @@ public class CodeWriter {
         }
     }
 
+    //Goes to the stack pointer and follows it
     private void followStackPointer(){
         atStackPointer(); // @SP
         followPointer();  // A=M
     }
 
+    //sets th address of the stack pointer to one greater than it currently is and moves there
     private void followIncrementedStackPointer(){
         atStackPointer();
         printWriter.println("AM=M+1");
     }
 
+    //sets th address of the stack pointer to one greater than it currently is and moves there
     private void followDecrementedStackPointer() {
         atStackPointer();
         followDecrementedPointer();
     }
 
+    //moves to one below the current stack pointer without
     private void atTopOfStackFromPointer(){
         atStackPointer(); // @SP
         atTopOfStack(); // A=M-1
@@ -272,11 +285,11 @@ public class CodeWriter {
 
     private void atArgument() { printWriter.println(predefinedSymbols[1]);} // @ARG
 
-    private void atTempVar() { printWriter.println("@15");}
+    private void atTempVar() { printWriter.println("@15");} //hard coded temp variable location
 
-    private void atFrame() { printWriter.println("@14");}
+    private void atFrame() { printWriter.println("@14");} //hard coded from variable location
 
-    private void unconditionalJump() { printWriter.println("0;JMP");}
+    private void unconditionalJump() { printWriter.println("0;JMP");} //jumps to the above address
 
     private void dataFromMemory() { printWriter.println("D=M");} // saves memory to register
 
@@ -288,5 +301,5 @@ public class CodeWriter {
 
     private void atTopOfStack() {printWriter.println("A=M-1");} // moves to one less than the pointer stored in memory
 
-    private void followDecrementedPointer(){ printWriter.println("AM=M-1");}
+    private void followDecrementedPointer(){ printWriter.println("AM=M-1");} //sets and moves to given address minus one
 }
