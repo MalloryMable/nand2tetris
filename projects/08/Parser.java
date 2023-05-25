@@ -19,7 +19,8 @@ public class Parser{
             String currentLine = scanner.nextLine()
                     .replaceAll("\\t+", "") //removes all tabs
                     .replaceAll("\\s+", " ") //trims sets of spaces to one space
-                    .replaceAll("^\\s", ""); //removes leading spaces
+                    .replaceAll("^\\s", "") //removes leading space
+                    .replaceAll("\\s$", ""); //removes trailing space
 
             if (!(currentLine.isEmpty() || currentLine.startsWith("//"))) { //removes blank lines and comments
 
@@ -40,7 +41,7 @@ public class Parser{
     public void advance () {
         //we identify the first word of our instruction cutting off at the first space
         lineArray = tempFile.get(++position).split("\\s");
-        type = getType(lineArray[0].toUpperCase());
+        type = getType(lineArray[0]);
 
     }
 
@@ -50,10 +51,7 @@ public class Parser{
     //returns the first argument as a string
     public String arg1() {
         return (type == Main.commandType.C_ARITHMETIC)? // returns arithmetic instructions
-                lineArray[0].toUpperCase():
-                (!(type == Main.commandType.C_LABEL || type == Main.commandType.C_GOTO ||type == Main.commandType.C_IF)?
-                //if there is nothing is case-sensitive arg1 is parsed to uppercase
-                    lineArray[1].toUpperCase(): lineArray[1]);
+                lineArray[0].toUpperCase(): lineArray[1];
     }
 
     //returns the second argument as int
@@ -63,7 +61,7 @@ public class Parser{
 
     //Returns the command type based on the first word
     private Main.commandType getType(String firstWord) { //Only called once broken out for logical division
-        return switch (firstWord) {
+        return switch (firstWord.toUpperCase()) {
             case "PUSH" -> Main.commandType.C_PUSH;
             case "POP" -> Main.commandType.C_POP;
             case "ADD", "SUB", "NEG", "EQ", "GT", "LT", "AND", "OR", "NOT" -> Main.commandType.C_ARITHMETIC;

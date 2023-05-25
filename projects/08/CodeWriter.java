@@ -91,7 +91,7 @@ public class CodeWriter {
          *only flags constants as false*/
 
         //TODO: Offset may need to be corrected to be above predefined addresses
-        switch (segment) {
+        switch (segment.toUpperCase()) {
 
             case "CONSTANT" -> {
                 memorySave = false; //a special control flow for pushing constants
@@ -210,7 +210,6 @@ public class CodeWriter {
             atFrame();
             followDecrementedPointer();
             dataFromMemory();
-            printWriter.println("Predefined Symbols");
             printWriter.println(predefinedSymbols[i]); //moves through list backwards
             memoryToData();
         }

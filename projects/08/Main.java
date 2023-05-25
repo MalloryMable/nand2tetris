@@ -15,10 +15,12 @@ public class Main {
     public static void main(String[] args) throws IOException {
 
         Path path = Path.of(args[0]);
+        Path targetDirectory = (args.length == 2)?
+                Path.of(args[1]): path;
 
         //checks if the user input is a directory or single file and uses the appropriate logic
         if((Files.isDirectory(path))){
-            writer = new CodeWriter(path.getFileName().toString());
+            writer = new CodeWriter(targetDirectory + "/" + path.getFileName());
             //Sys.init
             writeToFile(getInit(path).toString());
             //loop through valid vm files
@@ -26,7 +28,11 @@ public class Main {
         } else {
             //rather than creating the filename string twice to trim the file type a variable is created
             String filename = path.getFileName().toString();
-            writer = new CodeWriter(filename.substring(0,filename.lastIndexOf('.')));
+            String directoryPath = targetDirectory.toString();
+            if(directoryPath.contains(".")){
+                directoryPath = directoryPath.substring(0, directoryPath.lastIndexOf('/') -1);
+            }
+            writer = new CodeWriter( directoryPath + filename.substring(0,filename.lastIndexOf('.')));
             writeToFile(path.toString());
         }
 
