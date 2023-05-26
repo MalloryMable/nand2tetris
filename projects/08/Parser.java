@@ -51,7 +51,7 @@ public class Parser{
     //returns the first argument as a string
     public String arg1() {
         return (type == Main.commandType.C_ARITHMETIC)? // returns arithmetic instructions
-                lineArray[0].toUpperCase(): lineArray[1];
+                lineArray[0]: lineArray[1];
     }
 
     //returns the second argument as int
