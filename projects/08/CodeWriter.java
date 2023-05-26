@@ -3,12 +3,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
-/*
- *  Made the call to hard code the flow of the way this writes rather than breaking out string pointer
- *  movement because while usages are similar. Very few are identical and breaking them out takes about
- *  the same number of lines and makes this whole program less readable
-*/
-
 public class CodeWriter {
     private final PrintWriter printWriter;
     private final ArrayList<String> functions = new ArrayList<>();
