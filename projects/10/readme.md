@@ -1,4 +1,3 @@
-# Unfished
+# Compiler
 --
-## Wanted to share this pretty bit of code with friends
-------------------------------
+## takes a directory or file as an argument and then prints out the files parsed to tabbed XML
