@@ -7,17 +7,16 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 public class JackTokenizer {
-    //enum keyword
-    public enum tokenType {KEYWORD, SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST};
+    public enum tokenType {KEYWORD, SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST}
     public static final List<String> keywords = List.of("class", "constructor", "function", "method", "field",
             "static", "var", "int", "char", "boolean", "void", "true", "false", "null", "this", "let", "do", "if",
             "else", "while", "return");
     private static final Pattern mainPat = Pattern.compile(
-            "(\"[^\"]*\")|\\s?(;)|([{}\\[\\],.+\\-*&|<>/=~()])\\s?|(\\d+)\\s?|(\\w+)\\s?");
+            "\"[^\"]*\"|\\s?;|[{}\\[\\],.+\\-*&|<>/=~()]\\s?|\\d+\\s?|\\w+\\s?");
     private static final Pattern commentPat = Pattern.compile("//");
     private static final Pattern digitPat = Pattern.compile("\\d+");
     private static final Pattern stringPat = Pattern.compile("\"(.*)\"");
-    private static final Pattern symbolPat = Pattern.compile("[{}\\[\\],.+\\-*&|<>/=~()]");
+    private static final Pattern symbolPat = Pattern.compile("\\s?([;{}\\[\\],.+\\-*&|<>/=~()])\\s?");
 
     private final Matcher matcher;
 
@@ -32,7 +31,7 @@ public class JackTokenizer {
 
         String fileString = Files.lines(inFile)
                 .map(string -> {
-                    Matcher commentMatch = commentPat.matcher(string); //removes double dash comments
+                    Matcher commentMatch = commentPat.matcher(string); //removes double dash comments01
                     return commentMatch.find() ? string.substring(0, commentMatch.start()) : string;
                 })//trims comments
                 .map(string -> string.replaceAll("\\t+", "") //removes all tabs
@@ -53,13 +52,14 @@ public class JackTokenizer {
 
 
         String tokenString = matcher.group();
-        System.out.println(tokenString);
+
         Matcher stringMatcher = stringPat.matcher(tokenString);
         Matcher sybmolMatcher = symbolPat.matcher(tokenString);
         Matcher digitMatcher = digitPat.matcher(tokenString);
+
         if(sybmolMatcher.find()){
             type = tokenType.SYMBOL;
-            symbol = sybmolMatcher.group().charAt(0);
+            symbol = sybmolMatcher.group(1).charAt(0);
         } else if(digitMatcher.find()) {
             type = tokenType.INT_CONST;
             intVal = Integer.parseInt(digitMatcher.group()); //this is always going to be digits so no catching needed
@@ -72,16 +72,17 @@ public class JackTokenizer {
         }else {
             type = tokenType.IDENTIFIER;
             identifier = tokenString.strip();
-        };
+        }
     }
-
+    public tokenType getType(){
+        return type;
+    }
     public String identifier(){
         return identifier;
     }
     public String stingVal(){
         return stringConst;
     }
-
     public char symbol(){
         return symbol;
     }
