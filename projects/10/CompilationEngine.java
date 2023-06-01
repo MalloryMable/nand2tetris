@@ -20,10 +20,10 @@ public class CompilationEngine {
     public void compileClass(){
         safeAdvance();
         writer.println("<class>");
-        writer.format("%s<keyword> class </keyword>\n", indent);
+        printEnclosed( "keyword", "class");
 
         safeAdvance();
-        writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+        printEnclosed("identifier", tokenizer.identifier());
 
         safeAdvance();
         writer.format("%s<symbol> %c </symbol>\n",indent, tokenizer.symbol());
@@ -43,29 +43,29 @@ public class CompilationEngine {
     public void compileClassVarDec(){
         //allows for rows of declared variables
         while (tokenizer.keyword().equals("static") || tokenizer.keyword().equals("field")) {
-            writer.format("%s<classVarDec>\n", indent);
+            printOpen("<classVarDec>");
                 // field or static
-                addIndent();
-                writer.format("%s<keyword> %s </keyword>\n",indent , tokenizer.keyword());
+
+               printEnclosed("keyword", tokenizer.keyword());
                 safeAdvance();
 
                 printDatatype();
                 // the name section of variable declaration field int [num]
-                writer.format("%s<identifier> %s </identifier>\n",indent , tokenizer.identifier());
+                printEnclosed("identifier", tokenizer.identifier());
                 safeAdvance();
                 // checks for multiple declared variables
                 while (tokenizer.symbol() == ',') {
                     writer.format("%s<symbol> , </symbol>\n", indent);
                     safeAdvance();
 
-                    writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+                    printEnclosed("identifier", tokenizer.identifier());
                     safeAdvance();
                 }
                 // this should be semicolon every time
                 writer.format("%s<symbol> ; </symbol>\n", indent);
 
-                decIndent();
-                writer.format("%s</classVarDec>\n", indent);
+
+                printClose("classVarDec");
                 safeAdvance();
             }
     }
@@ -81,9 +81,9 @@ public class CompilationEngine {
         //Begins subroutine
         if (tokenizer.keyword().equals("function") || tokenizer.keyword().equals("method") || tokenizer.keyword().equals("constructor")) {
 
-            writer.format("%s<subroutineDec>\n", indent);
-            addIndent();
-            writer.format("%s<keyword> %s </keyword>\n",indent, tokenizer.keyword());
+            printOpen("subroutineDec");
+
+            printEnclosed("keyword", tokenizer.keyword());
         }
 
         safeAdvance();
@@ -93,54 +93,49 @@ public class CompilationEngine {
 
         // name of the subroutine if not constructor
         if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
-            writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+            printEnclosed("identifier", tokenizer.identifier());
             safeAdvance();
         }
         //returns an error language syntax is broken
         checkSymbol('(');
 
-        writer.format("%s<parameterList>\n", indent);
-        addIndent();
+        printOpen("parameterList");
+
 
         compileParameterList();
 
-        decIndent();
-        writer.format("%s</parameterList>\n", indent);
+        printClose("parameterList");
         writer.format("%s<symbol> ) </symbol>\n",indent);
         //advance outside of if statement
         safeAdvance();
 
-        writer.format("%s<subroutineBody>\n", indent);
-        addIndent();
+        printOpen("subroutineBody");
         checkSymbol('{');
 
         // get all var declarations in the subroutine
         while (tokenizer.getType() == JackTokenizer.tokenType.KEYWORD && tokenizer.keyword().equals("var") ) {
-            writer.format("%s<varDec>\n", indent);
-            addIndent();
-            writer.format("%s<keyword> var </keyword>\n", indent);
+            printOpen("varDec");
+
+            printEnclosed("keyword", "var");
             safeAdvance();
             compileVarDec();
-            decIndent();
-            writer.format("%s</varDec>\n", indent);
+
+            printClose("varDec");
         }
 
-        writer.format("%s<statements>\n", indent);
-        addIndent();
+        printOpen("statements");
+
         compileStatements();
-        decIndent();
-        writer.format("%s</statements>\n", indent);
+
+        printClose("statements");
         writer.format("%s<symbol> %c </symbol>\n", indent, tokenizer.symbol());
 
-        decIndent();
-        writer.format("%s</subroutineBody>\n", indent);
-        decIndent();
-        writer.format("%s</subroutineDec>\n", indent);
+        printClose("subroutineBody");
+        printClose("subroutineDec");
 
 
         // recursive call
         compileSubroutine();
-
         }
 
     //takes any number of data types and variable names divided by commas
@@ -148,9 +143,9 @@ public class CompilationEngine {
         while(!(isSymbol() && tokenizer.symbol() == ')')){
             //gets name and also non keyword class types
             if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
-                writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+                printEnclosed("identifier", tokenizer.identifier());
             } else {
-                writer.format("%s<keyword> %s </keyword>\n",indent, tokenizer.keyword());
+                printEnclosed("keyword", tokenizer.keyword());
             }
             safeAdvance();
             // for comma separated lists
@@ -169,38 +164,29 @@ public class CompilationEngine {
         } else if (tokenizer.getType() == JackTokenizer.tokenType.KEYWORD ) {
             switch (tokenizer.keyword()) {
                 case "do" -> {
-                    writer.format("%s<doStatement>\n", indent);
-                    addIndent();
+                    printOpen("doStatement");
                     compileDo();
-                    decIndent();
-                    writer.format("%s</doStatement>\n", indent);
+                    printClose("doStatement");
                 }
                 case "let" -> {
-                    writer.format("%s<letStatement>\n", indent);
-                    addIndent();
+                    printOpen("letStatement");
                     compileLet();
-                    decIndent();
-                    writer.format("%s</letStatement>\n", indent);
+                    printClose("letStatement");
                 }
                 case "if" -> {
-                    writer.format("%s<ifStatement>\n", indent);
-                    addIndent();
+                    printOpen("ifStatement");
                     compileIf();
-                    decIndent();
-                    writer.format("%s</ifStatement>\n", indent);
+                    printClose("ifStatement");
                 }
                 case "while" -> {
-                    writer.format("%s<whileStatement>\n", indent);
-                    addIndent();
+                    printOpen("whileStatement");
                     compileWhile();
-                    decIndent();
-                    writer.format("%s</whileStatement>\n", indent);
+                    printClose("whileStatement");
                 }
                  case "return"-> {
-                     writer.format("%s<returnStatement>\n", indent);
-                     addIndent();compileReturn();
-                     decIndent();
-                     writer.format("%s</returnStatement>\n", indent);
+                     printOpen("returnStatement");
+                     compileReturn();
+                     printClose("returnStatement");
                 }
             }
         }
@@ -216,7 +202,7 @@ public class CompilationEngine {
 
         //first name declaration
         if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
-            writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+            printEnclosed("identifier", tokenizer.identifier());
         }
         safeAdvance();
 
@@ -224,7 +210,7 @@ public class CompilationEngine {
         while (JackTokenizer.tokenType.SYMBOL == tokenizer.getType() && tokenizer.symbol() == ','){
             writer.format("%s<symbol> , </symbol>\n", indent);
             safeAdvance();
-            writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+            printEnclosed("identifier", tokenizer.identifier());
             safeAdvance();
         }
 
@@ -236,39 +222,37 @@ public class CompilationEngine {
 
     //prints do statement
     public void compileDo(){
-        writer.format("%s<keyword> do </keyword>\n", indent);
+        printEnclosed("keyword", "do");
         safeAdvance();
 
         // function call
-        writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+        printEnclosed("identifier", tokenizer.identifier());
         safeAdvance();
         // for dot statement calls(ex: foo.bar())
         if (isSymbol() && tokenizer.symbol() == '.') {
             writer.format("%s<symbol> . </symbol>\n", indent);
             safeAdvance();
 
-            writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+            printEnclosed("identifier", tokenizer.identifier());
             safeAdvance();
         }
 
         checkSymbol('(');
 
         // parameters in the parentheses
-        writer.format("%s<expressionList>\n", indent);
-        addIndent();
+        printOpen("expressionList");
         compileExpressionList();
-        decIndent();
-        writer.format("%s</expressionList>\n", indent);
+        printClose("expressionList");
 
         checkSymbol(')');
     }
 
     //prints a let statement
     public void compileLet(){
-        writer.format("%s<keyword> let </keyword>\n", indent);
+        printEnclosed("keyword", "let");
         safeAdvance();
 
-        writer.format("%s<identifier> %s </identifier>\n",indent , tokenizer.identifier());
+        printEnclosed("identifier", tokenizer.identifier());
         safeAdvance();
         // in the case of an array foo[x]
         if (isSymbol() && tokenizer.symbol() == '[') {
@@ -288,7 +272,7 @@ public class CompilationEngine {
 
     //compiles a while statement
     public void compileWhile(){
-        writer.format("%s<keyword> while </keyword>\n", indent);
+        printEnclosed("keyword", "while" );
         safeAdvance();
 
         checkSymbol('(');
@@ -297,18 +281,16 @@ public class CompilationEngine {
 
         checkSymbol('{');
 
-        writer.format("%s<statements>\n", indent);
-        addIndent();
+        printOpen("statements");
         compileStatements();
-        decIndent();
-        writer.format("%s</statements>\n", indent);
+        printClose("statements");
 
         checkSymbol('}');
     }
 
     //prints return statement called from Statement
     public void compileReturn(){
-        writer.format("%s<keyword> return </keyword>\n", indent);
+        printEnclosed("keyword","return");
         safeAdvance();
         if (!(isSymbol() && tokenizer.symbol() == ';')) {
             compileExpression();
@@ -318,7 +300,7 @@ public class CompilationEngine {
 
     //prints an if statement
     public void compileIf(){
-        writer.format("%s<keyword> if </keyword>\n", indent);
+        printEnclosed("keyword", "if");
         safeAdvance();
 
         checkSymbol('(');
@@ -329,26 +311,22 @@ public class CompilationEngine {
 
         checkSymbol('{');
 
-        writer.format("%s<statements>\n", indent);
-        addIndent();
+        printOpen("statements");
         compileStatements();
-        decIndent();
-        writer.format("%s</statements>\n", indent);
+        printClose("statements");
 
         checkSymbol('}');
 
         // if there is an else clause of the if statement
         if (tokenizer.getType() == JackTokenizer.tokenType.KEYWORD && tokenizer.keyword().equals("else")) {
-            writer.format("%s<keyword> else </keyword>\n",indent);
+            printEnclosed("keyword", "else");
             safeAdvance();
 
             checkSymbol('{');
 
-            writer.format("%s<statements>\n", indent);
-            addIndent();
+            printOpen("statements");
             compileStatements();
-            decIndent();
-            writer.format("%s</statements>\n", indent);
+            printClose("%statements");
 
             checkSymbol('}');
         }
@@ -356,8 +334,8 @@ public class CompilationEngine {
 
     // prints one to two terms(see below) combined by an optional binary operator
     public void compileExpression(){
-        writer.format("%s<expression>\n", indent);
-        addIndent();
+        printOpen("expression");
+
         compileTerm();
 
         while (isSymbol() && isOperation()) {
@@ -373,21 +351,20 @@ public class CompilationEngine {
 
             compileTerm();
         }
-        decIndent();
-        writer.format("%s</expression>\n", indent);
+        printClose("expression");
     }
 
     //prints a possible variable including arrays (foo[5]) and dot functions foo.bar() as well as unary operators
     public void compileTerm(){
-        writer.format("%s<term>\n", indent);
-        addIndent();
+        printOpen("term");
+
         //First case, identifier call
         if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
             String prevIdentifier = tokenizer.identifier();
             safeAdvance();
             // for [] terms
             if (isSymbol() && tokenizer.symbol() == '[') {
-                writer.format("%s<identifier> %s </identifier>\n",indent , prevIdentifier);
+                printEnclosed("identifier", prevIdentifier);
                 writer.format("%s<symbol> [ </symbol>\n", indent);
                 safeAdvance();
                 compileExpression();
@@ -401,44 +378,42 @@ public class CompilationEngine {
 
                 // for dot statement calls(ex: foo.bar())
                 if (tokenizer.symbol() == '.') {
-                    writer.format("%s<identifier> %s </identifier>\n",indent, prevIdentifier);
+                    printEnclosed("identifier", prevIdentifier);
                     writer.format("%s<symbol> . </symbol>\n", indent);
                     safeAdvance();
 
-                    writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+                    printEnclosed("identifier", tokenizer.identifier());
                     safeAdvance();
                 }
 
                 checkSymbol('(');
 
-                writer.format("%s<expressionList>\n", indent);
-                addIndent();
+                printOpen("expressionList");
                 compileExpressionList();
-                decIndent();
-                writer.format("%s</expressionList>\n", indent);
+                printClose("%expressionList");
 
                 checkSymbol(')');
             //for vanilla variables(ex: foo)
             } else {
-                writer.format("%s<identifier> %s </identifier>\n",indent, prevIdentifier);
+                printEnclosed("identifier", prevIdentifier);
             }
         //Built in data types
         } else {
             // integer
             if (tokenizer.getType() == JackTokenizer.tokenType.INT_CONST) {
-                writer.format("%s<integerConstant> %d </integerConstant>\n",indent , tokenizer.intVal());
+                print(String.format("<integerConstant> %d </integerConstant>" , tokenizer.intVal()));
                 safeAdvance();
             }
             // strings
             else if (tokenizer.getType() == JackTokenizer.tokenType.STRING_CONST) {
-                writer.format("%s<stringConstant> %s </stringConstant>\n",indent , tokenizer.stingVal());
+                printEnclosed("stringConstant" , tokenizer.stingVal());
                 safeAdvance();
             }
             // this, true, false, or null
             else if (tokenizer.getType() == JackTokenizer.tokenType.KEYWORD &&
                     (tokenizer.keyword().equals("this") || tokenizer.keyword().equals("null") ||
                     tokenizer.keyword().equals("false") || tokenizer.keyword().equals("true"))) {
-                writer.format("%s<keyword> %s </keyword>\n",indent, tokenizer.keyword());
+                printEnclosed("keyword", tokenizer.keyword());
                 safeAdvance();
 
             }
@@ -462,8 +437,8 @@ public class CompilationEngine {
                 safeAdvance();
             }
         }
-        decIndent();
-        writer.format("%s</term>\n",indent);
+
+        printClose("term");
 
     }
 
@@ -491,6 +466,24 @@ public class CompilationEngine {
         }
     }
 
+    private void printEnclosed(String tag, String text){
+        print(String.format("<%1$s> %2$s </%1$s>", tag, text));
+    }
+
+    private void printOpen(String tag){
+        print(String.format("<%s>", tag));
+        indent+= '\t';
+    }
+
+    private void printClose(String tag){
+        indent = indent.substring(1);
+        print(String.format("</%s>", tag));
+    }
+
+    private void print(String text){
+        writer.format("%s%s\n", indent, text);
+    }
+
     //checks for a given symbol and returns an error if language syntax isn't met
     private void checkSymbol(char symbol){
         if(!(isSymbol() && tokenizer.symbol() == symbol)){
@@ -503,9 +496,9 @@ public class CompilationEngine {
     //checks if the current data type is built in or constructed, then advances
     private void printDatatype(){
         if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
-            writer.format("%s<identifier> %s </identifier>\n",indent, tokenizer.identifier());
+            printEnclosed("identifier", tokenizer.identifier());
         } else {
-            writer.format("%s<keyword> %s </keyword>\n",indent, tokenizer.keyword());
+            printEnclosed("keyword", tokenizer.keyword());
         }
         safeAdvance();
     }
@@ -520,13 +513,4 @@ public class CompilationEngine {
         return "<>+=".contains(String.valueOf(tokenizer.symbol()));
     }
 
-    //adds 1 tab to indentation
-    private void addIndent(){
-        indent += '\t';
-    }
-
-    //removes the first tab from indentation
-    private void decIndent(){
-        indent = indent.substring(1);
-    }
 }
