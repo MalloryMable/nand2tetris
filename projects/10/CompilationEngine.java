@@ -6,6 +6,8 @@ public class CompilationEngine {
     private final PrintWriter writer;
     private final JackTokenizer tokenizer;
     private String indent = "\t";
+    private static final String identifier = "identifier";
+    private static final String keyword = "keyword";
     public CompilationEngine(Path path) throws IOException {
         tokenizer = new JackTokenizer(path);
 
@@ -20,20 +22,21 @@ public class CompilationEngine {
     public void compileClass(){
         safeAdvance();
         writer.println("<class>");
-        printEnclosed( "keyword", "class");
 
+        printEnclosed( keyword, "class");
         safeAdvance();
-        printEnclosed("identifier", tokenizer.identifier());
 
+        printEnclosed(identifier, tokenizer.identifier());
         safeAdvance();
-        writer.format("%s<symbol> %c </symbol>\n",indent, tokenizer.symbol());
 
-        safeAdvance();
+        checkSymbol('{');
+
         compileClassVarDec();
 
         compileSubroutine();
 
-        writer.format("%s<symbol> %c </symbol>\n",indent, tokenizer.symbol());
+        //this is always checked by compileSubroutine
+        printSymbol(tokenizer.symbol());
         writer.println("</class>\n");
 
         writer.close();
@@ -43,36 +46,36 @@ public class CompilationEngine {
     public void compileClassVarDec(){
         //allows for rows of declared variables
         while (tokenizer.keyword().equals("static") || tokenizer.keyword().equals("field")) {
-            printOpen("<classVarDec>");
+            printOpen("classVarDec");
                 // field or static
 
-               printEnclosed("keyword", tokenizer.keyword());
+                printEnclosed(keyword, tokenizer.keyword());
                 safeAdvance();
 
-                printDatatype();
+                compileDatatype();
                 // the name section of variable declaration field int [num]
-                printEnclosed("identifier", tokenizer.identifier());
+                printEnclosed(identifier, tokenizer.identifier());
+
                 safeAdvance();
                 // checks for multiple declared variables
                 while (tokenizer.symbol() == ',') {
-                    writer.format("%s<symbol> , </symbol>\n", indent);
+                    printSymbol(',');
                     safeAdvance();
 
-                    printEnclosed("identifier", tokenizer.identifier());
+                    printEnclosed(identifier, tokenizer.identifier());
                     safeAdvance();
                 }
                 // this should be semicolon every time
-                writer.format("%s<symbol> ; </symbol>\n", indent);
-
+                checkSymbol(';');
 
                 printClose("classVarDec");
-                safeAdvance();
             }
     }
 
     //prints a type declaration, some number of variables, and any number of statements until '}' is reached
     public void compileSubroutine(){
         // breaks the recursive call
+
         if (isSymbol() && tokenizer.symbol() == '}') {
             safeAdvance();
             return;
@@ -83,17 +86,17 @@ public class CompilationEngine {
 
             printOpen("subroutineDec");
 
-            printEnclosed("keyword", tokenizer.keyword());
+            printEnclosed(keyword, tokenizer.keyword());
         }
 
         safeAdvance();
 
         // if the subroutine uses a class datatype OR we are encountering a constructor
-        printDatatype();
+        compileDatatype();
 
         // name of the subroutine if not constructor
         if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
-            printEnclosed("identifier", tokenizer.identifier());
+            printEnclosed(identifier, tokenizer.identifier());
             safeAdvance();
         }
         //returns an error language syntax is broken
@@ -101,11 +104,10 @@ public class CompilationEngine {
 
         printOpen("parameterList");
 
-
         compileParameterList();
 
         printClose("parameterList");
-        writer.format("%s<symbol> ) </symbol>\n",indent);
+         printSymbol(')');
         //advance outside of if statement
         safeAdvance();
 
@@ -116,7 +118,7 @@ public class CompilationEngine {
         while (tokenizer.getType() == JackTokenizer.tokenType.KEYWORD && tokenizer.keyword().equals("var") ) {
             printOpen("varDec");
 
-            printEnclosed("keyword", "var");
+            printEnclosed(keyword, "var");
             safeAdvance();
             compileVarDec();
 
@@ -128,7 +130,7 @@ public class CompilationEngine {
         compileStatements();
 
         printClose("statements");
-        writer.format("%s<symbol> %c </symbol>\n", indent, tokenizer.symbol());
+        printSymbol(tokenizer.symbol());
 
         printClose("subroutineBody");
         printClose("subroutineDec");
@@ -142,15 +144,12 @@ public class CompilationEngine {
     public void compileParameterList(){
         while(!(isSymbol() && tokenizer.symbol() == ')')){
             //gets name and also non keyword class types
-            if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
-                printEnclosed("identifier", tokenizer.identifier());
-            } else {
-                printEnclosed("keyword", tokenizer.keyword());
-            }
+            compileDatatype();
+            printEnclosed(identifier, tokenizer.identifier());
             safeAdvance();
             // for comma separated lists
             if (isSymbol() && tokenizer.symbol() ==  ',') {
-                writer.format("%s<symbol> , </symbol>\n", indent);
+                printSymbol(',');
                 safeAdvance();
             }
 
@@ -198,42 +197,39 @@ public class CompilationEngine {
     public void compileVarDec(){
 
         //type declaration
-        printDatatype();
+        compileDatatype();
 
         //first name declaration
         if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
-            printEnclosed("identifier", tokenizer.identifier());
+            printEnclosed(identifier, tokenizer.identifier());
         }
         safeAdvance();
 
         //optional further declarations
         while (JackTokenizer.tokenType.SYMBOL == tokenizer.getType() && tokenizer.symbol() == ','){
-            writer.format("%s<symbol> , </symbol>\n", indent);
+            printSymbol(',');
             safeAdvance();
-            printEnclosed("identifier", tokenizer.identifier());
+            printEnclosed(identifier, tokenizer.identifier());
             safeAdvance();
         }
 
-        if (JackTokenizer.tokenType.SYMBOL == tokenizer.getType() && tokenizer.symbol() == ';') {
-            writer.format("%s<symbol> ; </symbol>\n", indent);
-        }
-        safeAdvance();
+        checkSymbol(';');
     }
 
     //prints do statement
     public void compileDo(){
-        printEnclosed("keyword", "do");
+        printEnclosed(keyword, "do");
         safeAdvance();
 
         // function call
-        printEnclosed("identifier", tokenizer.identifier());
+        printEnclosed(identifier, tokenizer.identifier());
         safeAdvance();
         // for dot statement calls(ex: foo.bar())
         if (isSymbol() && tokenizer.symbol() == '.') {
-            writer.format("%s<symbol> . </symbol>\n", indent);
+            printSymbol('.');
             safeAdvance();
 
-            printEnclosed("identifier", tokenizer.identifier());
+            printEnclosed(identifier, tokenizer.identifier());
             safeAdvance();
         }
 
@@ -249,14 +245,15 @@ public class CompilationEngine {
 
     //prints a let statement
     public void compileLet(){
-        printEnclosed("keyword", "let");
+        printEnclosed(keyword, "let");
         safeAdvance();
 
-        printEnclosed("identifier", tokenizer.identifier());
+        printEnclosed(identifier, tokenizer.identifier());
         safeAdvance();
         // in the case of an array foo[x]
         if (isSymbol() && tokenizer.symbol() == '[') {
-            writer.format("%s<symbol> [ </symbol>\n", indent);
+            printSymbol('[');
+
             compileExpression();
             safeAdvance();
 
@@ -272,7 +269,7 @@ public class CompilationEngine {
 
     //compiles a while statement
     public void compileWhile(){
-        printEnclosed("keyword", "while" );
+        printEnclosed(keyword, "while" );
         safeAdvance();
 
         checkSymbol('(');
@@ -290,7 +287,7 @@ public class CompilationEngine {
 
     //prints return statement called from Statement
     public void compileReturn(){
-        printEnclosed("keyword","return");
+        printEnclosed(keyword,"return");
         safeAdvance();
         if (!(isSymbol() && tokenizer.symbol() == ';')) {
             compileExpression();
@@ -300,7 +297,7 @@ public class CompilationEngine {
 
     //prints an if statement
     public void compileIf(){
-        printEnclosed("keyword", "if");
+        printEnclosed(keyword, "if");
         safeAdvance();
 
         checkSymbol('(');
@@ -319,14 +316,14 @@ public class CompilationEngine {
 
         // if there is an else clause of the if statement
         if (tokenizer.getType() == JackTokenizer.tokenType.KEYWORD && tokenizer.keyword().equals("else")) {
-            printEnclosed("keyword", "else");
+            printEnclosed(keyword, "else");
             safeAdvance();
 
             checkSymbol('{');
 
             printOpen("statements");
             compileStatements();
-            printClose("%statements");
+            printClose("statements");
 
             checkSymbol('}');
         }
@@ -341,10 +338,10 @@ public class CompilationEngine {
         while (isSymbol() && isOperation()) {
             // < > & = have different xml code
             switch (tokenizer.symbol()) {
-                case '<' -> writer.format("%s<symbol> &lt; </symbol>\n", indent);
-                case '>' -> writer.format("%s<symbol> &gt; </symbol>\n", indent);
-                case '&' -> writer.format("%s<symbol> &amp; </symbol>\n", indent);
-                case '=' -> writer.format("%s<symbol> = </symbol>\n", indent);
+                case '<' -> printEnclosed("symbol", "&lt;");
+                case '>' -> printEnclosed("symbol","&gt;");
+                case '&' -> printEnclosed("symbol","&amp;");
+                case '=' -> printSymbol('=');
                 default -> throw new RuntimeException("Expected operator symbol instead of" + tokenizer.symbol());
             }
             safeAdvance();
@@ -364,13 +361,14 @@ public class CompilationEngine {
             safeAdvance();
             // for [] terms
             if (isSymbol() && tokenizer.symbol() == '[') {
-                printEnclosed("identifier", prevIdentifier);
-                writer.format("%s<symbol> [ </symbol>\n", indent);
+                printEnclosed(identifier, prevIdentifier);
+                printSymbol('[');
                 safeAdvance();
                 compileExpression();
 
                 safeAdvance();
-                writer.format("%s<symbol> ] </symbol>\n", indent);
+                //this should be checked but advancing breaks things
+                printSymbol(']');
             }
             //  subroutine calls both dot '.' and parenthetic '()' calls
             else if (isSymbol() &&
@@ -378,11 +376,11 @@ public class CompilationEngine {
 
                 // for dot statement calls(ex: foo.bar())
                 if (tokenizer.symbol() == '.') {
-                    printEnclosed("identifier", prevIdentifier);
-                    writer.format("%s<symbol> . </symbol>\n", indent);
+                    printEnclosed(identifier, prevIdentifier);
+                    printSymbol('.');
                     safeAdvance();
 
-                    printEnclosed("identifier", tokenizer.identifier());
+                    printEnclosed(identifier, tokenizer.identifier());
                     safeAdvance();
                 }
 
@@ -395,7 +393,7 @@ public class CompilationEngine {
                 checkSymbol(')');
             //for vanilla variables(ex: foo)
             } else {
-                printEnclosed("identifier", prevIdentifier);
+                printEnclosed(identifier, prevIdentifier);
             }
         //Built in data types
         } else {
@@ -413,13 +411,13 @@ public class CompilationEngine {
             else if (tokenizer.getType() == JackTokenizer.tokenType.KEYWORD &&
                     (tokenizer.keyword().equals("this") || tokenizer.keyword().equals("null") ||
                     tokenizer.keyword().equals("false") || tokenizer.keyword().equals("true"))) {
-                printEnclosed("keyword", tokenizer.keyword());
+                printEnclosed(keyword, tokenizer.keyword());
                 safeAdvance();
 
             }
             // parenthetical separation
             else if (isSymbol() || tokenizer.symbol() == '(') {
-                writer.format("%s<symbol> ( </symbol>\n", indent);
+                printSymbol('(');
                 safeAdvance();
 
                 compileExpression();
@@ -430,7 +428,7 @@ public class CompilationEngine {
             else if (isSymbol() &&
                     (tokenizer.symbol() == '-' || tokenizer.symbol() == '~')) {
 
-                writer.format("<symbol> %s </symbol>\n", tokenizer.symbol());
+                printSymbol(tokenizer.symbol());
                 safeAdvance();
 
                 compileTerm();
@@ -451,7 +449,7 @@ public class CompilationEngine {
 
         while (isSymbol() && tokenizer.symbol()== ','){
 
-            writer.format("%s<symbol> , </symbol>\n", indent);
+            printSymbol( ',');
             safeAdvance();
             compileExpression();
         }
@@ -464,6 +462,13 @@ public class CompilationEngine {
         } else {
             throw new RuntimeException("Runtime Error. Unexpected program end");
         }
+    }
+
+    private void print(String text){
+        writer.format("%s%s\n", indent, text);
+    }
+    private void printSymbol(char symbol){
+        print(String.format("<symbol> %c </symbol>", symbol));
     }
 
     private void printEnclosed(String tag, String text){
@@ -480,25 +485,21 @@ public class CompilationEngine {
         print(String.format("</%s>", tag));
     }
 
-    private void print(String text){
-        writer.format("%s%s\n", indent, text);
-    }
-
     //checks for a given symbol and returns an error if language syntax isn't met
     private void checkSymbol(char symbol){
         if(!(isSymbol() && tokenizer.symbol() == symbol)){
             throw new RuntimeException("Runtime Error. Expected token:" + symbol);
         }
-        writer.format("%s<symbol> %c </symbol>\n",indent, tokenizer.symbol());
+        printSymbol(tokenizer.symbol());
         safeAdvance();
     }
 
     //checks if the current data type is built in or constructed, then advances
-    private void printDatatype(){
+    private void compileDatatype(){
         if (tokenizer.getType() == JackTokenizer.tokenType.IDENTIFIER) {
-            printEnclosed("identifier", tokenizer.identifier());
+            printEnclosed(identifier, tokenizer.identifier());
         } else {
-            printEnclosed("keyword", tokenizer.keyword());
+            printEnclosed(keyword, tokenizer.keyword());
         }
         safeAdvance();
     }
