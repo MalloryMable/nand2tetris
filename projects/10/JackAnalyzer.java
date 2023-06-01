@@ -26,23 +26,4 @@ public class JackAnalyzer {
             new CompilationEngine(path);
         }
     }
-    //This is broken out to more easily interact with its logic more easily
-    private static void analyze(Path path) throws IOException {
-        JackTokenizer tokenizer = new JackTokenizer(path);
-        while (tokenizer.hasMoreTokens()){
-            tokenizer.advance();
-            switch (tokenizer.getType()){
-                case KEYWORD -> {
-                    switch(tokenizer.keyword()){
-
-                    }
-                }
-                case SYMBOL -> tokenizer.symbol();
-                case IDENTIFIER -> tokenizer.identifier();
-                case INT_CONST -> tokenizer.intVal();
-                case STRING_CONST -> tokenizer.stingVal();
-                default -> System.out.println("common failure state");
-            }
-        }
-    }
 }
