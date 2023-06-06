@@ -1,15 +1,16 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 
 
 public class HackAssembler {
     public static void main(String[] args) throws IOException {
         //Takes an argument or the present file.asm value
-        String inFile = args.length != 0 ? args[0] : "file.asm";
-        String outFile = inFile.substring(0,inFile.lastIndexOf('.')) + ".hack";
+        Path inFile = Path.of(args[0] );
+        String outFile = inFile.toString().replace(".asm", ".hack");
 
-        Parser parser = new Parser(inFile);
+        Parser parser = new Parser(inFile.toString());
         SymbolTable symbolTable = new SymbolTable();
 
         int adjustedCount = 0;  //tracks the line count after symbols are removed!
