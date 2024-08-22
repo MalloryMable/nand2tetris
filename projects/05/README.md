@@ -1,12 +1,12 @@
 ## Computer Hardware Architecture
 The Hack computer consists of 32K registers of ROM for holding the OS written in chapter 12(what's a BIOS?), the CPU, and 2 16K RAM sticks.
 
-Since the CPU determines the structure of opcodes the syntax of opcode is as follows:
-Address: 0vvvvvvvvvvvvvvv
-Instruction: 111accccccdddjjj
-a = Determines if the ALU uses the value of the register or value stored within a register.
-c = In order the 6 bits for modifying operations of the ALU(zx, nx, zy, ny, f, no).
-d = specifies where to the result of the ALU to(data register(D), address register(A), Program Counter register(PC)).
+Since the CPU determines the structure of opcodes the syntax of opcode is as follows:\n
+Address: 0vvvvvvvvvvvvvvv\n
+Instruction: 111accccccdddjjj\n
+a = Determines if the ALU uses the value of the register or value stored within a register.\n
+c = In order the 6 bits for modifying operations of the ALU(zx, nx, zy, ny, f, no).\n
+d = specifies where to the result of the ALU to(data register(D), address register(A), Program Counter register(PC)).\n
 j = specifies a condition for jumping after instruction executes(in order: less than zero, equal to zero, greater than zero).
 
 ### CPU
