@@ -11,13 +11,13 @@ d = specifies where to the result of the ALU to(data register(D), address regist
 j = specifies a condition for jumping after instruction executes(in order: less than zero, equal to zero, greater than zero).
 
 ### CPU
-**Input**
+**Input**\
 Takes in a the value stored in the current register as a 16 bit value, a 16 bit instruction code, and a single bit indicating whether to flush memory and move to the begnining of the current program.
 
-**Output**
+**Output**\
 Sends a 16 bit output value, a single bit instructing whether to write to current register, the address of the to be targeted in the next loop, and the 15 bit value to load into the incrementer to determine what instruction to load next.
 
-**Implementation**
+**Implementation**\
 The CPU is a wrapper combining the ALU and PC(mostly consisting of Mux chips). As well as a special 16 bit register used for storing output from the ALU for convient math, and a special register for storing one RAM address.
 Notice that the value being incremented by the PC can be altered by the jump condition being met, or the reset bit being sent into the CPU. Further it is relevant that the reset bit supercedes jumps.
 
