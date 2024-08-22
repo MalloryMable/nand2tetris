@@ -3,7 +3,7 @@ The Hack computer consists of 32K registers of ROM for holding the OS written in
 
 Since the CPU determines the structure of opcodes the syntax of opcode is as follows:\
 Address: 0vvvvvvvvvvvvvvv\
-Instruction: 111accccccdddjjj\
+Instruction: 111accccccdddjjj
 
 a = Determines if the ALU uses the value of the register or value stored within a register.\
 c = In order the 6 bits for modifying operations of the ALU(zx, nx, zy, ny, f, no).\
