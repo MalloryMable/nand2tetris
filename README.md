@@ -14,18 +14,18 @@ Translates a .asm assembly file to the .hack binary format.
 ### VM Translator
 Translates all .vm files in a taget directory to a .asm file.
 
-`VMtranslator [FILE]`
+`VMtranslator [FILE | DIR]`
 
 ### Compiler
 Compiles a .jack project down to a .vm virtual machine language project.
 
-`JackCompiler [FILE]`
+`JackCompiler [FILE | DIR]`
 
 
 ### Shell Script
 Also included is a shell script used to chain the three stages of the compiler together.
 
-`./compile2bin.sh [FILE]`
+`./compile2bin.sh [FILE | DIR]`
 
 
 ## Part One: Hardware
