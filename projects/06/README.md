@@ -1,24 +1,73 @@
-## Computer Hardware Architecture
-The Hack computer consists of 32K registers of ROM for holding the OS written in chapter 12(what's a BIOS?), the CPU, and 2 16K RAM sticks.
+## Assembler
+Translates a .asm assembly file to the .hack binary format.
 
-Since the CPU determines the structure of opcodes the syntax of opcode is as follows:
-Address: 0vvvvvvvvvvvvvvv
-Instruction: 111accccccdddjjj
-a = Determines if the ALU uses the value of the register or value stored within a register.
-c = In order the 6 bits for modifying operations of the ALU(zx, nx, zy, ny, f, no).
-d = specifies where to the result of the ALU to(data register(D), address register(A), Program Counter register(PC)).
-j = specifies a condition for jumping after instruction executes(in order: less than zero, equal to zero, greater than zero).
+`HackAssembler [FILE]`
 
-### CPU
-**Input**
-Takes in a the value stored in the current register as a 16 bit value, a 16 bit instruction code, and a single bit indicating whether to flush memory and move to the begnining of the current program.
 
-**Output**
-Sends a 16 bit output value, a single bit instructing whether to write to current register, the address of the to be targeted in the next loop, and the 15 bit value to load into the incrementer to determine what instruction to load next.
+### Parser
+Reads in an assembly file, sanitizes it, and tacks command types as Address, Label, or Computation.
+This module also contains the InstructionType enumeration used for denoting what type of instruction the current line is.
 
-**Implementation**
-The CPU is a wrapper combining the ALU and PC(mostly consisting of Mux chips). As well as a special 16 bit register used for storing output from the ALU for convient math, and a special register for storing one RAM address.
-Notice that the value being incremented by the PC can be altered by the jump condition being met, or the reset bit being sent into the CPU. Further it is relevant that the reset bit supercedes jumps.
+**Parser(String)**\
+Opens the passed file(this secretly uses a path, please don't tell the MIT professors), and makes a first pass removing unused lines, and spaces.
 
-### Memory
-15 bits of potential address space consisting of a RAM16K stick(0x0000-0x3FFF), a screen map(using a builtin chip for now)(0x4000-0x5FFF), and a keyboard chip dedicated to mapping inputs to ASCII values(builtin chip)(0x6000-0x6098). The remaining potential addresses are left unused.
+**boolean hasMoreLines()**\
+Checks if there is a line remaining to be parsed.
+
+**void advance()**\
+Moves on to the next line, and if address or label syntax is detected makes that the parsers label type, otherwise the type defaults to comp.
+
+**instructionType instructionType()**\
+Getter function for the type of the current instruction.
+
+**String symbol()**\
+Returns the symbol contained within an address or label instruction.
+
+**String dest()**\
+Returns the destination of a given comp code as a String.
+
+**String comp()**\
+Returns a string containing only the computation the ALU will be undertaking.
+
+**String jump()**\
+Returns the 3 character jump code or null if no jump condition was included.
+
+### Code
+This module is used to translate the substrings of comp collected by the parser into strings of 1s and 0s.
+
+**String comp(String)**\
+Translates a string to the 7 bits used to specifiy ALU behavior.
+
+**String dest(String)**\
+Translates a string to the 3 bits indicating where the ALU output will be sent. Note that these may be passed in any order.
+
+**String jump(String)**\
+Translates a string to the 3 bits specifying the jump conditions.
+
+### SymbolTable
+A hashmap containing the register each symbol corresponds to.
+
+**SymbolTable()**\
+Initalizes the table, adding predefined symbols.
+
+**void addEntry(String, int)**\
+Adds a new symbol to the table.
+
+**boolean contains(String)**\
+Checks if a given string is contained within the symbol table.
+
+**int getAddress(String)**\
+Returns the address of a given symbol.
+Only meant to be used after contains has been run, so there is no built in error checking.
+
+### Main
+Parses the asm file in three passes. Pass one is handled by the parser and does sanitization and standardization.
+The second pass finds lines where labels are declared and removes them from the code storing the line they appear on. 
+This allows labels to be referenced before they are declared safely.
+This is also why the parser advance function resets the counter when reaching the end of the stored lines.
+The third pass handles both other instruction types and writes the result of translating parsed code snippets to a new file with the same name as the file passed in. 
+
+
+
+NOTES TO MALLORY:
+There is a lot of duplicated work in the parser, perhaps tag each line after sanitization rather than tagging when advance is called. Also there has to be a more efficient way of storing this data than in an arraylist. Also maybe add the option to name an output file/directory
