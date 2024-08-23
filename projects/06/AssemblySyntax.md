@@ -64,16 +64,18 @@ Jump conditionals check the flags output by the alu after the computation step a
 
 ### Predefined Symbols
 
+### Predefined Symbols
+
 |Label   | RAM Address | Hex Address | Use         |
 |:------|:-----------:|:-----------:|:------------|
 | SP     | 0           | 0x0000      | Stack pointer. Holds the register top  of the stack in memory |
-| LCL    | 1           | 0x0001      | [TODO]      |
-| ARG    | 2           | 0x0002      | [TODO]      |
-| THIS   | 3           | 0x0004      | [TODO]      |
-| THAT   | 4           | 0x0005      | [TODO]      |
-| R0-R15 | 0-16        | 0x0000-F    | Predefined short cuts to the first 15 registers in memory for ease of access. [TODO: Remember which of these my assembler reserves] |
+| LCL    | 1           | 0x0001      | Points to where local variables begin being stored      |
+| ARG    | 2           | 0x0002      | Points to where argument variables are being stored      |
+| THIS   | 3           | 0x0004      | Free register reserved for the VM      |
+| THAT   | 4           | 0x0005      | Free register reserved for the VM      |
+| R0-R15 | 0-16        | 0x0000-F    | Predefined short cuts to the first 15 registers in memory for ease of access. |
 | SCREEN | 16384       | 0x4000      | Points the base address of the screen memory map |
-| KBD    | 24576       | 0x6000      | Points the base address of the keyboard memory map |
+| KBD    | 24576       | 0x6000      | Points the base address of the keyboard memory map ||
 
 ### Comments
 You may comment comp lines using the // convention.
