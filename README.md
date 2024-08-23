@@ -40,7 +40,7 @@ The first part of the project consists of 6 chapters defining the hardware for t
 
 ## Part Two: Software Stack
 
-Below is the implementation for the JACK compiler and a JACK based OS for that can be run on the HACK Compiler.
+The second part of the project consists of 6 chapters implementation for the JACK compiler and a JACK based OS that can be run on the HACK Computer.
 
 [ 1. VM Translator ](projects/08/README.md)\
 [ 2. JACK Compiler ](projects/11/README.md)\
