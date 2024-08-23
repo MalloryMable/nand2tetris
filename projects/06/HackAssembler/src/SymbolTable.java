@@ -1,8 +1,7 @@
-import java.util.ArrayList;
+import java.util.HashMap;
 
 public class SymbolTable {
-    private final ArrayList<String> symbolList= new ArrayList<>();
-    private final ArrayList<Integer> addressList = new ArrayList<>();
+    private final HashMap<String, Integer> symbolTable = new HashMap<>(); 
 
     public SymbolTable(){
         //initialize table here
@@ -33,17 +32,16 @@ public class SymbolTable {
 
     //Add a symbol and its given address
     public void addEntry(String symbol, int address){
-        symbolList.add(symbol);
-        addressList.add(address);
+        symbolList.put(symbol, address)
     }
 
     //checks for a given symbol in the list
     public boolean contains(String symbol){
-        return symbolList.contains(symbol);
+        return symbolList.containsKey(symbol);
     }
 
     //Returns the address of a given symbol. Use only if symbolList contains symbol
     public int getAddress(String symbol){
-        return addressList.get(symbolList.indexOf(symbol));
+        return addressList.get(symbol);
     }
 }
