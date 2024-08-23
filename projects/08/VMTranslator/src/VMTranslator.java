@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 
-public class Main {
+public class VMTranslator {
 
     enum commandType {
         C_ARITHMETIC, C_PUSH, C_POP , C_LABEL, C_GOTO, C_IF, C_FUNCTION, C_RETURN, C_CALL
@@ -15,20 +15,24 @@ public class Main {
     public static void main(String[] args) throws IOException {
 
         Path path = Path.of(args[0]);
+        Path targetDirectory = (args.length == 2)?
+                Path.of(args[1]): path;
 
         //checks if the user input is a directory or single file and uses the appropriate logic
         if((Files.isDirectory(path))){
-            writer = new CodeWriter( String.format("%s/%s.asm",path.toString(), path.getFileName()));
+            writer = new CodeWriter(targetDirectory + "/" + path.getFileName());
             //Sys.init
-            try {
-                writeToFile(getInit(path).toString());
-            } catch (NullPointerException e){
-                System.out.println("Warning! Missing init file");
-            }
+            writeToFile(getInit(path).toString());
             //loop through valid vm files
             openDir(path);
         } else {
-            writer = new CodeWriter( (path.toString().contains("."))? path.toString().replace(".vm", ".asm"): path + ".asm");
+            //rather than creating the filename string twice to trim the file type a variable is created
+            String filename = path.getFileName().toString();
+            String directoryPath = targetDirectory.toString();
+            if(directoryPath.contains(".")){
+                directoryPath = directoryPath.substring(0, directoryPath.lastIndexOf('/') -1);
+            }
+            writer = new CodeWriter( directoryPath + filename.substring(0,filename.lastIndexOf('.')));
             writeToFile(path.toString());
         }
 
@@ -47,7 +51,7 @@ public class Main {
                 }
             }
         } catch (IOException | DirectoryIteratorException directoryError) {
-            System.out.println("Directory error: " + directoryError);
+            System.err.println(directoryError);
         }
         return null;
     }
@@ -66,7 +70,7 @@ public class Main {
                 }
             }
         } catch (IOException | DirectoryIteratorException x) {
-            System.out.println("Caught error: "+ x);
+            System.err.println(x);
         }
     }
 
