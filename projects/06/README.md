@@ -70,4 +70,4 @@ The third pass handles both other instruction types and writes the result of tra
 
 
 NOTES TO MALLORY:
-There is a lot of duplicated work in the parser, perhaps tag each line after sanitization rather than tagging when advance is called. Also there has to be a more efficient way of storing this data than in an arraylist. Also maybe add the option to name an output file/directory
+Maybe add the option to name an output file/directory
