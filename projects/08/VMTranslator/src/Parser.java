@@ -5,7 +5,7 @@ import java.util.Scanner;
 
 public class Parser{
     private String[] lineArray = new String[3];
-    private Main.commandType type;
+    private VMTranslator.commandType type;
     boolean checked = false;
     boolean moreLines;
     Scanner scanner;
@@ -55,11 +55,11 @@ public class Parser{
     }
 
     //returns command type determined at advancement
-    public Main.commandType commandType() { return type;}
+    public VMTranslator.commandType commandType() { return type;}
 
     //returns the first argument as a string
     public String arg1() {
-        return (type == Main.commandType.C_ARITHMETIC)? lineArray[0]: lineArray[1];
+        return (type == VMTranslator.commandType.C_ARITHMETIC)? lineArray[0]: lineArray[1];
     }
 
     //returns the second argument as int
@@ -68,17 +68,17 @@ public class Parser{
     }
 
     //Returns the command type based on the first word
-    private Main.commandType getType(String firstWord) { //Only called once broken out for logical division
+    private VMTranslator.commandType getType(String firstWord) { //Only called once broken out for logical division
         return switch (firstWord.toUpperCase()) {
-            case "PUSH" -> Main.commandType.C_PUSH;
-            case "POP" -> Main.commandType.C_POP;
-            case "ADD", "SUB", "NEG", "EQ", "GT", "LT", "AND", "OR", "NOT" -> Main.commandType.C_ARITHMETIC;
-            case "LABEL" -> Main.commandType.C_LABEL;
-            case "GOTO" -> Main.commandType.C_GOTO;
-            case "IF-GOTO" -> Main.commandType.C_IF;
-            case "CALL" -> Main.commandType.C_CALL;
-            case "FUNCTION" -> Main.commandType.C_FUNCTION;
-            case "RETURN" ->  Main.commandType.C_RETURN;
+            case "PUSH" -> VMTranslator.commandType.C_PUSH;
+            case "POP" -> VMTranslator.commandType.C_POP;
+            case "ADD", "SUB", "NEG", "EQ", "GT", "LT", "AND", "OR", "NOT" -> VMTranslator.commandType.C_ARITHMETIC;
+            case "LABEL" -> VMTranslator.commandType.C_LABEL;
+            case "GOTO" -> VMTranslator.commandType.C_GOTO;
+            case "IF-GOTO" -> VMTranslator.commandType.C_IF;
+            case "CALL" -> VMTranslator.commandType.C_CALL;
+            case "FUNCTION" -> VMTranslator.commandType.C_FUNCTION;
+            case "RETURN" ->  VMTranslator.commandType.C_RETURN;
             default -> throw new IllegalStateException("Unexpected value: " + firstWord);
         };
     }
