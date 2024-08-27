@@ -1,85 +1,87 @@
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.Scanner;
+import java.io.IOException;
+import java.nio.file.DirectoryIteratorException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 
-public class Parser{
-    private String[] lineArray = new String[3];
-    private VMTranslator.commandType type;
-    boolean checked = false;
-    boolean moreLines;
-    Scanner scanner;
-    String nextLine;
+public class VMTranslator {
+    
+    public enum commandType {
+        C_ARITHMETIC, C_PUSH, C_POP , C_LABEL, C_GOTO, C_IF, C_FUNCTION, C_RETURN, C_CALL
+    }
+    static CodeWriter writer;
+    public static void main(String[] args) throws IOException {
 
-    //Opens file and reads in all valid lines of code to Temp File
-    public Parser(String fileName) throws FileNotFoundException {
+        Path path = Path.of(args[0]);
+        Path targetDirectory = (args.length == 2)?
+                Path.of(args[1]): path;
 
-        File file = new File(fileName);
-        scanner = new Scanner(file);
-        
+        //checks if the user input is a directory or single file and uses the appropriate logic
+        if((Files.isDirectory(path))){
+            writer = new CodeWriter(targetDirectory + "/" + path.getFileName());
+            writer.writeInit();
+            //loop through valid vm files
+            openDir(path);
+        } else {
+            //rather than creating the filename string twice to trim the file type a variable is created
+            String filename = path.getFileName().toString();
+            String directoryPath = targetDirectory.toString();
+            if(directoryPath.contains(".")){
+                directoryPath = directoryPath.substring(0, directoryPath.lastIndexOf('/') -1);
+            }
+            writer = new CodeWriter( directoryPath + filename.substring(0,filename.lastIndexOf('.')));
+            writer.writeInit();
+            writeToFile(path.toString());
+        }
+
+        writer.close();
     }
 
-    //checks if the next line is outside of file size
-    public boolean hasMoreLines() {
-        if (!checked) {
-            checked = true;
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine()
-                    .replaceAll("\\t+", "") //removes all tabs
-                    .replaceAll("\\s+", " ") //trims sets of spaces to one space
-                    .replaceAll("^\\s", "") //removes leading space
-                    .replaceAll("\\s$", ""); //removes trailing space
-
-                if (!(line.isEmpty() || line.startsWith("//"))) { //removes blank lines and comments
-                    if (line.contains("//")) {
-                        line = line.substring(0, line.indexOf('/'));
-                    }
-
-                    nextLine = line;
-                    moreLines = true;
-                    break;
+    //opens every folder and reads in all valid files
+    private static void openDir(Path dir) throws IOException{
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+            for (Path file: stream) {
+                String stringFile = file.getFileName().toString();
+                // recursion
+                if(Files.isDirectory(file)){
+                    openDir(file);
+                // base case: ensures the file type is vm, and then that we aren't compiling Sys.vm early
+                } else if(stringFile.substring(stringFile.lastIndexOf('.')).equals(".vm")
+                        && ! stringFile.equals("Sys.vm")) {
+                    writeToFile(file.toString());
                 }
             }
-            moreLines = false;
-        } 
-        return moreLines;
+        } catch (IOException | DirectoryIteratorException x) {
+            System.err.println(x);
+        }
     }
 
-    //Moves through Temp File(a list of strings)
-    public void advance () {
-        //we identify the first word of our instruction cutting off at the first space
-        lineArray = nextLine.split("\\s");
-        type = getType(lineArray[0]);
-        checked = false;
+    //writes a given file to the created file
+    private static void writeToFile(String inFile) throws FileNotFoundException {
+        writer.setCurrentFile(inFile.substring(1+inFile.lastIndexOf('\\'), inFile.lastIndexOf('.')).toUpperCase());
 
-    }
+        Parser parser = new Parser(inFile);
 
-    //returns command type determined at advancement
-    public VMTranslator.commandType commandType() { return type;}
-
-    //returns the first argument as a string
-    public String arg1() {
-        return (type == VMTranslator.commandType.C_ARITHMETIC)? lineArray[0]: lineArray[1];
-    }
-
-    //returns the second argument as int
-    public int arg2() {
-        return Integer.parseInt(lineArray[2]);
-    }
-
-    //Returns the command type based on the first word
-    private VMTranslator.commandType getType(String firstWord) { //Only called once broken out for logical division
-        return switch (firstWord.toUpperCase()) {
-            case "PUSH" -> VMTranslator.commandType.C_PUSH;
-            case "POP" -> VMTranslator.commandType.C_POP;
-            case "ADD", "SUB", "NEG", "EQ", "GT", "LT", "AND", "OR", "NOT" -> VMTranslator.commandType.C_ARITHMETIC;
-            case "LABEL" -> VMTranslator.commandType.C_LABEL;
-            case "GOTO" -> VMTranslator.commandType.C_GOTO;
-            case "IF-GOTO" -> VMTranslator.commandType.C_IF;
-            case "CALL" -> VMTranslator.commandType.C_CALL;
-            case "FUNCTION" -> VMTranslator.commandType.C_FUNCTION;
-            case "RETURN" ->  VMTranslator.commandType.C_RETURN;
-            default -> throw new IllegalStateException("Unexpected value: " + firstWord);
-        };
+        //goes through parsed .vm file writing assembly to a new .asm file
+        while(parser.hasMoreLines()){
+            parser.advance();
+            if(null != parser.commandType()) //You can't change it to a switch statement and make the enumeration globally available
+            switch (parser.commandType()) {
+                case C_PUSH, C_POP -> writer.writePushPop(parser.commandType(), parser.arg1(), parser.arg2());
+                case C_ARITHMETIC -> writer.writeArithmetic(parser.arg1());
+                case C_LABEL -> writer.writeLabel(parser.arg1());
+                case C_GOTO -> writer.writeGoto(parser.arg1());
+                case C_IF -> writer.writeIf(parser.arg1());
+                case C_CALL -> writer.writeCall(parser.arg1(), parser.arg2());
+                case C_FUNCTION -> writer.writeFunction(parser.arg1(), parser.arg2());
+                case C_RETURN -> writer.writeReturn();
+                default -> {
+                    // NOTE by returning the line from parser we could get better error handling
+                    throw new RuntimeException("Invalid command type found");
+                }
+            }
+        }
     }
 }
