@@ -64,7 +64,7 @@ public class CodeWriter {
     }
 
     // writes assembly to interact with the stack and an indicated segment in memory
-    public void writePushPop(Main.commandType type, String segment, int offset) {
+    public void writePushPop(VMTranslator.commandType type, String segment, int offset) {
         boolean memorySave = true; // As opposed to address save
         /* The added memory usage and time at compile
          * is better than extra lines of assembly
@@ -87,7 +87,7 @@ public class CodeWriter {
             case "THAT" -> predefinedPointer(predefinedSymbols[3], offset);
         }
 
-        if(type == Main.commandType.C_POP) {
+        if(type == VMTranslator.commandType.C_POP) {
             dataFromAddress(); // Saves target address
             atTempVar(); // free register here used to augment data
             memoryFromData(); // stores target
@@ -97,7 +97,7 @@ public class CodeWriter {
             atTempVar();
             followPointer(); // moves to stored target
             memoryFromData(); // saves to targeted register
-        } else if(type == Main.commandType.C_PUSH){
+        } else if(type == VMTranslator.commandType.C_PUSH){
             if(memorySave){
                 dataFromMemory(); // saves value found in a given segment
             }else{
