@@ -7,8 +7,8 @@ import java.nio.file.Path;
 
 
 public class VMTranslator {
-
-    enum commandType {
+    
+    public enum commandType {
         C_ARITHMETIC, C_PUSH, C_POP , C_LABEL, C_GOTO, C_IF, C_FUNCTION, C_RETURN, C_CALL
     }
     static CodeWriter writer;
@@ -21,8 +21,7 @@ public class VMTranslator {
         //checks if the user input is a directory or single file and uses the appropriate logic
         if((Files.isDirectory(path))){
             writer = new CodeWriter(targetDirectory + "/" + path.getFileName());
-            //Sys.init
-            writeToFile(getInit(path).toString());
+            writer.writeInit();
             //loop through valid vm files
             openDir(path);
         } else {
@@ -33,27 +32,11 @@ public class VMTranslator {
                 directoryPath = directoryPath.substring(0, directoryPath.lastIndexOf('/') -1);
             }
             writer = new CodeWriter( directoryPath + filename.substring(0,filename.lastIndexOf('.')));
+            writer.writeInit();
             writeToFile(path.toString());
         }
 
-
         writer.close();
-    }
-
-    //recursively searches for the Sys.vm file to initiate our assembly
-    private static Path getInit(Path dir) throws IOException {
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
-            for (Path file: stream) {
-                if(Files.isDirectory(file)){
-                    return getInit(file);
-                } else if(file.getFileName().toString().equals("Sys.vm")) {
-                    return file;
-                }
-            }
-        } catch (IOException | DirectoryIteratorException directoryError) {
-            System.err.println(directoryError);
-        }
-        return null;
     }
 
     //opens every folder and reads in all valid files
@@ -61,9 +44,10 @@ public class VMTranslator {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path file: stream) {
                 String stringFile = file.getFileName().toString();
-
+                // recursion
                 if(Files.isDirectory(file)){
                     openDir(file);
+                // base case: ensures the file type is vm, and then that we aren't compiling Sys.vm early
                 } else if(stringFile.substring(stringFile.lastIndexOf('.')).equals(".vm")
                         && ! stringFile.equals("Sys.vm")) {
                     writeToFile(file.toString());
@@ -83,30 +67,20 @@ public class VMTranslator {
         //goes through parsed .vm file writing assembly to a new .asm file
         while(parser.hasMoreLines()){
             parser.advance();
-            //You can't change it to a switch statement and make the enumeration globally available
-            if(parser.commandType() == commandType.C_PUSH || parser.commandType() == commandType.C_POP) {
-
-                writer.writePushPop(parser.commandType(), parser.arg1(), parser.arg2());
-            } else if(parser.commandType() == commandType.C_ARITHMETIC){
-
-                writer.writeArithmetic(parser.arg1());
-            } else if(parser.commandType() == commandType.C_LABEL){
-
-                writer.writeLabel(parser.arg1());
-            } else if(parser.commandType() == commandType.C_GOTO){
-
-                writer.writeGoto(parser.arg1());
-            }else if(parser.commandType() == commandType.C_IF){
-
-                writer.writeIf(parser.arg1());
-            }else if(parser.commandType() == commandType.C_CALL){
-
-                writer.writeCall(parser.arg1(), parser.arg2());
-            } else if(parser.commandType() == commandType.C_FUNCTION){
-
-                writer.writeFunction(parser.arg1(), parser.arg2());
-            } else if(parser.commandType() == commandType.C_RETURN) {
-                writer.writeReturn();
+            if(null != parser.commandType()) //You can't change it to a switch statement and make the enumeration globally available
+            switch (parser.commandType()) {
+                case C_PUSH, C_POP -> writer.writePushPop(parser.commandType(), parser.arg1(), parser.arg2());
+                case C_ARITHMETIC -> writer.writeArithmetic(parser.arg1());
+                case C_LABEL -> writer.writeLabel(parser.arg1());
+                case C_GOTO -> writer.writeGoto(parser.arg1());
+                case C_IF -> writer.writeIf(parser.arg1());
+                case C_CALL -> writer.writeCall(parser.arg1(), parser.arg2());
+                case C_FUNCTION -> writer.writeFunction(parser.arg1(), parser.arg2());
+                case C_RETURN -> writer.writeReturn();
+                default -> {
+                    // NOTE by returning the line from parser we could get better error handling
+                    throw new RuntimeException("Invalid command type found");
+                }
             }
         }
     }
