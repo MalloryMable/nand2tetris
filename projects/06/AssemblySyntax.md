@@ -73,9 +73,9 @@ Jump conditionals check the flags output by the alu after the computation step a
 | ARG    | 2           | 0x0002      | Points to where argument variables are being stored      |
 | THIS   | 3           | 0x0004      | Free register reserved for the VM      |
 | THAT   | 4           | 0x0005      | Free register reserved for the VM      |
-| R0-R15 | 0-16        | 0x0000-F    | Predefined short cuts to the first 15 registers in memory for ease of access. |
+| R0-R15 | 0-16        | 0x0000-F    | Predefined short cuts to the first 15 registers in memory for ease of access. The first 4 are already defined, 4-12 are for temp variables. And 13-15 are reserved for VM translation. |
 | SCREEN | 16384       | 0x4000      | Points the base address of the screen memory map |
-| KBD    | 24576       | 0x6000      | Points the base address of the keyboard memory map ||
+| KBD    | 24576       | 0x6000      | Points the base address of the keyboard memory map |
 
 ### Comments
 You may comment comp lines using the // convention.
