@@ -64,8 +64,6 @@ Jump conditionals check the flags output by the alu after the computation step a
 
 ### Predefined Symbols
 
-### Predefined Symbols
-
 |Label   | RAM Address | Hex Address | Use         |
 |:------|:-----------:|:-----------:|:------------|
 | SP     | 0           | 0x0000      | Stack pointer. Holds the register top  of the stack in memory |
