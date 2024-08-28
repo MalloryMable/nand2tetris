@@ -31,14 +31,14 @@ public class JackTokenizer {
 
         String fileString = Files.lines(inFile)
                 .map(string -> {
-                    Matcher commentMatch = commentPat.matcher(string); //removes double dash comments01
+                    Matcher commentMatch = commentPat.matcher(string); // removes double dash comments01
                     return commentMatch.find() ? string.substring(0, commentMatch.start()) : string;
-                })//trims comments
-                .map(string -> string.replaceAll("\\t+", "") //removes all tabs
-                        .replaceAll("\\s+", " ") //trims sets of spaces to one space
-                        .replaceAll("^\\s|\\s$", "")) //removes leading and trailing space
-                .collect(Collectors.joining())//joins stream of lines into a single string
-                .replaceAll("/\\*.+?\\*/", ""); //finally remove block comments from the string
+                }) // trims comments
+                .map(string -> string.replaceAll("\\t+", "") // removes all tabs
+                        .replaceAll("\\s+", " ") // trims sets of spaces to one space
+                        .replaceAll("^\\s|\\s$", "")) // removes leading and trailing space
+                .collect(Collectors.joining())// joins stream of lines into a single string
+                .replaceAll("/\\*.+?\\*/", ""); // finally remove block comments from the string
 
         matcher = mainPat.matcher(fileString);
     }
@@ -48,7 +48,7 @@ public class JackTokenizer {
     }
 
     public void advance() {
-        //I do not reset metadata and trust that only the correct functions will be called for different types of data
+        // I do not reset metadata and trust that only the correct functions will be called for different types of data
         String tokenString = matcher.group();
 
         Matcher stringMatcher = stringPat.matcher(tokenString);
@@ -60,16 +60,19 @@ public class JackTokenizer {
             symbol = sybmolMatcher.group(1).charAt(0);
         } else if(digitMatcher.find()) {
             type = tokenType.INT_CONST;
-            intVal = Integer.parseInt(digitMatcher.group()); //this is always going to be digits so no catching needed
-        }else if(stringMatcher.find()){
+            intVal = Integer.parseInt(digitMatcher.group()); // this is always going to be digits so no catching needed
+        } else if(stringMatcher.find()){
             type = tokenType.STRING_CONST;
-            stringConst = stringMatcher.group(1); //for some reason this was taking group zero ?
-        }else if(keywords.contains(tokenString.strip())){//easier to strip here than fool around with groups
-            type = tokenType.KEYWORD;
-            keywordIndex = keywords.indexOf(tokenString.strip());
-        }else {
-            type = tokenType.IDENTIFIER;
-            identifier = tokenString.strip();
+            stringConst = stringMatcher.group(1); // for some reason this was taking group zero ?
+        } else {
+            tokenString = tokenString.strip(); // easier to strip here than fool around with groups
+            if(keywords.contains(tokenString)){
+                type = tokenType.KEYWORD;
+                keywordIndex = keywords.indexOf(tokenString);
+            } else {
+                type = tokenType.IDENTIFIER;
+                identifier = tokenString;
+            }
         }
     }
     public tokenType getType(){
