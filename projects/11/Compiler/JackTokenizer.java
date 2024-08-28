@@ -15,7 +15,7 @@ public class JackTokenizer {
             "\"[^\"]*\"|\\s?;|[{}\\[\\],.+\\-*&|<>/=~()]\\s?|\\d+\\s?|\\w+\\s?");
     private static final Pattern commentPat = Pattern.compile("//");
     private static final Pattern digitPat = Pattern.compile("\\d+");
-    private static final Pattern stringPat = Pattern.compile("\"(.*)\"");
+    private static final Pattern stringPat = Pattern.compile("\"([^\"]*)");
     private static final Pattern symbolPat = Pattern.compile("\\s?([;{}\\[\\],.+\\-*&|<>/=~()])\\s?");
 
     private final Matcher matcher;
