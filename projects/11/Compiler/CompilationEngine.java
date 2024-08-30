@@ -46,7 +46,7 @@ public class CompilationEngine {
 
         while (tokenizer.keyword().equals("static") || tokenizer.keyword().equals("field")) {
 
-            //SCOPE Declaration stores one of these
+            // SCOPE Declaration stores one of these
             SymbolTable.kind scope = tokenizer.keyword().equals("static") ?
                     SymbolTable.kind.STATIC: SymbolTable.kind.FIELD;
             safeAdvance();
@@ -75,34 +75,12 @@ public class CompilationEngine {
             return;
         }
 
-        //throws an error if a subroutine is declared incorrectly
-        if (!(tokenizer.keyword().equals("function")
-                || tokenizer.keyword().equals("method")
-                || tokenizer.keyword().equals("constructor"))) {
-            throw new RuntimeException("Expected subroutine declaration");
-
-        }
-        //Begins subroutine
+        // Begins subroutine
         symbolTable.startSubroutine();
-        //the choice here is to advance inside the if statement or make the keyword a variable to advance past it
-        if(tokenizer.keyword().equals("constructor")){
-            //finds the number of field variables and sets a given object to need that much space to construct itself
-            writer.writePush(segment.CONST, symbolTable.varCount(SymbolTable.kind.FIELD));
-            writer.writeCall("Memory.alloc", 1);
-            writer.writePop(segment.POINTER, 0);
-
+        // the choice here is to advance inside the if statement or make the keyword a variable to advance past it
+         if(tokenizer.keyword().equals("function")) {
             safeAdvance();
-            //type collection omitted
-            safeAdvance();
-            functionName = tokenizer.identifier();
-            safeAdvance();
-            checkSymbol('(');
-            writer.writeFunction(
-                    String.format("%s.%s", className, functionName),
-                    compileParameterList());
-        } else if(tokenizer.keyword().equals("function")){
-            safeAdvance();
-            //omitted return type getter as this is a weakly typed language
+            // omitted return type getter as this is a weakly typed language
             safeAdvance();
             functionName = tokenizer.identifier();
             safeAdvance();
@@ -111,25 +89,41 @@ public class CompilationEngine {
             writer.writeFunction(
                     String.format("%s.%s", className, functionName),
                     compileParameterList());
-
-        } else {
+        } else if tokenizer.keyword().equals("method") {
             safeAdvance();
             //advance past object type
             safeAdvance();
             functionName = tokenizer.identifier();
             safeAdvance();
             checkSymbol('(');
-            //one added to the number of args needed as this is always pushed as the first argument in a method
+            // one added to the number of args needed as this is always pushed as the first argument in a method
             writer.writeFunction(
                     String.format("%s.%s", className, functionName),
                     1 + compileParameterList());
-            //pushes this to symbol table, pushes it to argument zero pops to pointer so this becomes our local object
+            // pushes this to symbol table, pushes it to argument zero pops to pointer so this becomes our local object
             symbolTable.define(className, "this", SymbolTable.kind.ARG);
             writer.writePush(segment.ARG, 0);
             writer.writePop(segment.POINTER, 0);
+        
+        } else if(tokenizer.keyword().equals("constructor")) { // checks constructor last as the least likely subroutine
+            //finds the number of field variables and sets a given object to need that much space to construct itself
+            writer.writePush(segment.CONST, symbolTable.varCount(SymbolTable.kind.FIELD));
+            writer.writeCall("Memory.alloc", 1);
+            writer.writePop(segment.POINTER, 0);
 
+            safeAdvance();
+            // type collection omitted
+            safeAdvance();
+            functionName = tokenizer.identifier();
+            safeAdvance();
+            checkSymbol('(');
+            writer.writeFunction(
+                    String.format("%s.%s", className, functionName),
+                    compileParameterList());
+        } else { // throws an error if an invalid subroutine is declared
+            throw new RuntimeException("Expected subroutine declaration");
         }
-        //closed parenthesis is already checked so the program simply advance past it
+        // closed parenthesis is already checked so the program simply advance past it
         safeAdvance();
 
         checkSymbol('{');
