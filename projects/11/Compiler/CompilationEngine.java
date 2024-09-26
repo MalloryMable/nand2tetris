@@ -121,7 +121,7 @@ public class CompilationEngine {
                     String.format("%s.%s", className, functionName),
                     compileParameterList());
         } else { // throws an error if an invalid subroutine is declared
-            throw new RuntimeException("Expected subroutine declaration");
+            compilationError("Expected subroutine declaration");
         }
         // closed parenthesis is already checked so the program simply advance past it
         safeAdvance();
@@ -165,7 +165,7 @@ public class CompilationEngine {
                     case "if" -> compileIf();
                     case "while" -> compileWhile();
                     case "return" -> compileReturn();
-                    default -> throw new RuntimeException("not a function keyword: " + tokenizer.keyword());
+                    default -> compilationError("not a function keyword: " + tokenizer.keyword());
                 }
             }
 
@@ -328,7 +328,7 @@ public class CompilationEngine {
                 case '-' -> operation.SUB;
                 case '*' -> operation.MULT;
                 case '/' -> operation.DIV;
-                default -> throw new RuntimeException("Expected operator symbol instead of" + tokenizer.symbol());
+                default -> compilationError("Expected operator symbol instead of" + tokenizer.symbol());
             };
             safeAdvance();
             compileTerm();
@@ -463,14 +463,14 @@ public class CompilationEngine {
         if(tokenizer.hasMoreTokens()) {
             tokenizer.advance();
         } else {
-            throw new RuntimeException("Runtime Error. Unexpected program end");
+            compilationError("Runtime Error. Unexpected program end");
         }
     }
 
     //checks for a given symbol and returns an error if language syntax isn't met
     private void checkSymbol(char symbol){
         if(!(isSymbol() && tokenizer.symbol() == symbol)){
-            throw new RuntimeException("Runtime Error. Expected token:" + symbol);
+            compilationError("Runtime Error. Expected token:" + symbol);
         }
         safeAdvance();
     }
@@ -501,5 +501,11 @@ public class CompilationEngine {
             case VAR -> segment.LOCAL;
         };
     }
+
+private void compilationError(String e) {
+    writer.compilationError();
+    throw new RuntimeException(e);
+}
+    
     //TODO: and a keyword check like symbol check to make reading and catching bad code easier
 }
