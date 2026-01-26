@@ -416,7 +416,7 @@ public class CompilationEngine {
                     (tokenizer.keyword().equals("this") || tokenizer.keyword().equals("null") ||
                             tokenizer.keyword().equals("false") || tokenizer.keyword().equals("true"))) {
                 switch (tokenizer.keyword()){
-                    case "this" -> writer.writePush(segment.THIS, 0);
+                    case "this" -> writer.writePush(segment.POINTER, 0);
                     case "null", "false" -> writer.writePush(segment.CONST, 0);
                     case "true" ->{
                         writer.writePush(segment.CONST, 1);
