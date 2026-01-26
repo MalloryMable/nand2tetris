@@ -14,7 +14,7 @@ public class VMWriter {
     }
 
     public void writePop(CompilationEngine.segment segment, int index){
-        writer.format("\tpush %s %d\n" ,segmenttoString(segment), index );
+        writer.format("\tpop %s %d\n" ,segmenttoString(segment), index );
     }
 
     public void writeArithmetic(CompilationEngine.operation operation){
