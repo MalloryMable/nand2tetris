@@ -113,7 +113,7 @@ public class CodeWriter {
 
     // Initalization code calls Sys init() as defined by the compiler
     public void writeInit() {
-        // Saves 256 
+        // Saves 256
         printWriter.println("@256");
         dataFromAddress();
         atStackPointer();
@@ -146,14 +146,14 @@ public class CodeWriter {
         // checks if the called functionTable has a period and is pointing to another file
         String calledFunction = function.contains(".") ?
             function : String.format("%s.%s", currentFile, function);
-        
+
         // checks if a function exists
         functionExists(function);
 
         // creates a unique return label
         int timesCalled = functionTable.get(calledFunction) + 1;
         String returnLabel = calledFunction + '$' + "return" + timesCalled;
-        
+
         // updates the number of times the function has been called
         functionTable.put(calledFunction, timesCalled);
 
@@ -172,13 +172,13 @@ public class CodeWriter {
         }
 
         atStackPointer();
-        printWriter.println("MD=M+1");// saves new empty Stack Pointer to data
+        dataFromMemory();
         atLocal(); // moves to local
         memoryFromData(); // saves the pointer to register
 
         printWriter.println('@' + (5 + varCount));
         printWriter.println("A=D-A");
-        printWriter.println(predefinedSymbols[1]); // 
+        printWriter.println(predefinedSymbols[1]); //
         memoryFromData();
 
         // we cannot use traditional goTo because of the unconventional at
@@ -189,10 +189,10 @@ public class CodeWriter {
     }
 
     // writes the assembly to define a function to file
-    public void writeFunction(String function, int varCount){     
+    public void writeFunction(String function, int varCount){
         currentFunction = String.format("%s.%s", currentFile, function);
         functionExists(currentFunction);
-       
+
 
         writeSimpleLabel(currentFunction);
         followStackPointer();
@@ -255,7 +255,7 @@ public class CodeWriter {
     private void functionExists(String function) {
         if(!functionTable.containsKey(function)){
             functionTable.put(function, 0);
-        } 
+        }
     }
 
     // writes a return or at label that matches the conventions elsewhere
@@ -297,7 +297,7 @@ public class CodeWriter {
         atStackPointer();
         followDecrementedPointer();
     }
- 
+
     // moves to one below the current stack pointer without
     private void atTopOfStackFromPointer(){
         atStackPointer(); // @SP
