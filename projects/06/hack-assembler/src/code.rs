@@ -57,7 +57,7 @@ pub fn jump(mnemonic: Option<&str>) -> &'static str {
     }
 }
 
-pub fn dest(line: Option<&str>) -> &str {
+pub fn dest(line: Option<&str>) -> String {
     let line = match line {
         Some(s) => s,
         None => return "000".to_string(),
@@ -70,6 +70,6 @@ pub fn dest(line: Option<&str>) -> &str {
     if line.contains('D') {dest_bits[1] = b'1'; }
     if line.contains('M') {dest_bits[2] = b'1'; }
 
-    String::from_utf8(dest_bis.to_vec()).unwrap();
+    String::from_utf8(dest_bits.to_vec()).unwrap()
 }
 

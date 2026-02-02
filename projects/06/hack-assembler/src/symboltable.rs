@@ -25,8 +25,8 @@ impl SymbolTable {
         SymbolTable { table }
     }
 
-    pub fn add_entry(&mut self, symbol: String, address: i32) {
-        self.table.insert(symbol, address);
+    pub fn add_entry(&mut self, symbol: &String, address: i32) {
+        self.table.insert(symbol.to_string(), address);
     }
 
     /// Accepts &str so we can check without creating a new String object.

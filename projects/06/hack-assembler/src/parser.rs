@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, BufRead, Buf, Reader};
+use std::io::{self, BufReader, BufRead};
 use std::path::Path;
 
 
@@ -30,7 +30,7 @@ impl Parser {
             .map(|line| {
                 let mut cleaned = line.trim();
                 if let Some(idx) = cleaned.find("//") {
-                    cleaned = &claned[..idx];
+                    cleaned = &cleaned[..idx];
                 }
                 cleaned.trim().to_string().to_uppercase()
             })
@@ -43,14 +43,16 @@ impl Parser {
 impl Iterator for Parser {
     type Item = Command;
 
-    fn next(&mut self) -> Result<Self::Item> {
+    fn next(&mut self) -> Option<Self::Item> {
+        let instruction = self.lines.next()?;
+
         // Categorize instruction
         // Address
         if instruction.starts_with('@') {
-            Ok(Command::A(instruction[1..].to_string()))
+            return Some(Command::A(instruction[1..].to_string()));
         // Label
         } else if instruction.starts_with('(') && instruction.ends_with(')') {
-            Ok(Command::L(instruction[1..instruction.len()-1].to_string()))
+            return Some(Command::L(instruction[1..instruction.len()-1].to_string()));
         }
         // Compute - default
         let mut dest = None;
@@ -64,7 +66,7 @@ impl Iterator for Parser {
                 dest = Some(parts[0].to_string());
                 parts[1]
             },
-            _ =>  {}// TODO: throw Error
+            _ => panic!("Syntax Error: Multiple '=' in C-Command")
         };
 
         let sub_parts: Vec<&str> = comp_jump_part.split(';').collect();
@@ -72,11 +74,11 @@ impl Iterator for Parser {
 
         if sub_parts.len() == 2 {
             jump = Some(sub_parts[1].to_string());
-        } else {
-            // TODO: throw Error
+        } else if sub_parts.len() >= 2 {
+            panic!("Syntax Error: Multiple ';' in C-Command");
         }
 
-        Some(Command::C(dest, comp, jump));
+        Some(Command::C(dest, comp, jump))
 
     }
 }
