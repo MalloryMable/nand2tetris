@@ -69,10 +69,11 @@ static COMP_TABLE: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new
     // D|M, M|D
     m.insert("D|M", "1010101"); // 55
     m.insert("M|D", "1010101"); // 55
+    m
 });
 
 static JUMP_TABLE: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new( || {
-    let m = HashMap::new();
+    let mut m = HashMap::new();
 
     m.insert("JGT", "001");
     m.insert("JEQ", "010");
@@ -81,6 +82,7 @@ static JUMP_TABLE: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new
     m.insert("JNE", "101");
     m.insert("JLE", "110");
     m.insert("JMP", "111");
+    m
 });
 
 // FUNCTIONS
@@ -92,15 +94,19 @@ pub fn comp(line: &str) -> &'static str {
 }
 
 pub fn dest(line: Option<&str>) -> &str {
-    let line = line.unwrap_or_else(|| return "000");
+    let line = match line {
+        Some(s) => s,
+        None => return "000"to_string(),
+    };
 
+    // TODO: Mask design pattern
     let mut dest_bits = *b"000";
 
-    if line.contains('A') {bits[0] = b'1'; }
-    if line.contains('D') {bits[1] = b'1'; }
-    if line.contains('M') {bits[2] = b'1'; }
+    if line.contains('A') {dest_bits[0] = b'1'; }
+    if line.contains('D') {dest_bits[1] = b'1'; }
+    if line.contains('M') {dest_bits[2] = b'1'; }
 
-    String::from_utf8(bis.to_vec()).unwrap();
+    String::from_utf8(dest_bis.to_vec()).unwrap();
 }
 
 pub fn jump(line: Option<&str>) -> &'static str {
