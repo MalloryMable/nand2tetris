@@ -32,7 +32,7 @@ impl Parser {
                 if let Some(idx) = cleaned.find("//") {
                     cleaned = &cleaned[..idx];
                 }
-                cleaned.trim().to_string().to_uppercase()
+                cleaned.trim().to_string()
             })
             .filter(|line| !line.is_empty());
 
@@ -49,6 +49,7 @@ impl Iterator for Parser {
         // Categorize instruction
         // Address
         if instruction.starts_with('@') {
+            // TODO:  add a function for converting common reserved words to uppercase
             return Some(Command::A(instruction[1..].to_string()));
         // Label
         } else if instruction.starts_with('(') && instruction.ends_with(')') {
@@ -58,7 +59,9 @@ impl Iterator for Parser {
         let mut dest = None;
         let mut jump = None;
 
-        let parts: Vec<&str> = instruction.split('=').collect();
+        // NOTE: comp instructions are always case insensitive
+        let binding = instruction.to_uppercase();
+        let parts: Vec<&str> = binding.split('=').collect();
 
         let comp_jump_part = match parts.len()  {
             1 => parts[0],

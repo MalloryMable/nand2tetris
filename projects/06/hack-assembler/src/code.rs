@@ -1,3 +1,5 @@
+// NOTE: If you don't have a dest or jump location just don't write it. We don't support "null" at
+// this level
 pub fn comp(mnemonic: &str) -> &'static str {
     match mnemonic {
         // 0 / 1 / -1
