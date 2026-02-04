@@ -149,6 +149,10 @@ impl CodeWriter {
         }
         Ok(())
     }
+
+    fn write_label(&mut self, label: String ) -> io::Result<()> {
+
+    }
     // TODO: write_label(&label)
     // TODO: write_goto(&label)
     // TODO: write_if(&label)
