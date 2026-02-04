@@ -3,7 +3,7 @@ use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
 //TODO: change u32 to u16 since this is translating down to a specific known 16x CPU
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Cmd {
     // Actual computation/math opperations
     Math(Math),
@@ -23,6 +23,7 @@ pub enum Cmd {
     Call(String, u32), // function name nArgs
 }
 
+#[derive(Clone)]
 pub enum Segment {
     Argument, // Dynamically alocated
     Local, // Dynamically alocated
@@ -34,17 +35,20 @@ pub enum Segment {
     Temp, // ..8
 }
 
+#[derive(Clone)]
 pub enum Math {
     Neg(Neg), // Negating commands
     Bin(Bin), // Binary opperations
     Comp(Comp), // Comparions opperations
 }
 
+#[derive(Clone)]
 pub enum Neg { // Recall from software defintion that -M and !M are not equal
     Not,
     Neg,
 }
 
+#[derive(Clone)]
 pub enum Bin {
     Add,
     Sub,
@@ -52,6 +56,7 @@ pub enum Bin {
     Or,
 }
 
+#[derive(Clone)]
 pub enum Comp {
     Eq,
     Gt,
@@ -96,7 +101,7 @@ impl Iterator for Parser  {
             };
 
             // Here we define the control flow we will feed to the writer
-            match command_word.to_lowercase().to_str() { // no risk of collision for commands
+            return match command_word.to_lowercase().as_str() { // no risk of collision for commands
                 // # Mathutation
                 // ## Negation of what is stored in Memory
                 "not" => Some(Cmd::Math(Math::Neg(Neg::Not))), // M=!M
@@ -115,16 +120,16 @@ impl Iterator for Parser  {
                 "push" => {
                     let (segment, offset) = define_segment(
                     parts.next()?,
-                    parts.next()?.parse::<u32>().ok());
+                    parts.next()?.parse::<u32>().ok()?);
 
-                    Cmd::Push(segment, offset)
+                    return Some(Cmd::Push(segment, offset));
                 },
                 "pop" => {
                     let (segment, offset) = define_segment(
                     parts.next()?,
-                    parts.next()?.parse::<u32>().ok());
+                    parts.next()?.parse::<u32>().ok()?);
 
-                    Cmd::Pop(segment, offset)
+                    return Some(Cmd::Pop(segment, offset));
                 },
                 "label" => Some(Cmd::Label(parts.next()?.to_string())),
                 "goto"  => Some(Cmd::Goto(parts.next()?.to_string())),
@@ -140,14 +145,14 @@ impl Iterator for Parser  {
 
                 // Unknown command?
                 _ => panic!("Unknown command: {}", command_word),
-            }
+            };
         }
         None
     }
 }
 
 fn define_segment(segment: &str, offset: u32) -> (Segment, u32) {
-    match segment.to_string().to_lowercase(){
+    match segment.to_lowercase().as_str() {
         "argument" => (Segment::Argument, offset),
         "local" => (Segment::Local, offset),
         "static" => {
