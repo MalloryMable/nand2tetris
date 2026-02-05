@@ -1,0 +1,1 @@
+/home/mallory/git-repos/nand2tetris/projects/08/vm-translator/target/debug/vm-translator: /home/mallory/git-repos/nand2tetris/projects/08/vm-translator/src/codewriter.rs /home/mallory/git-repos/nand2tetris/projects/08/vm-translator/src/main.rs /home/mallory/git-repos/nand2tetris/projects/08/vm-translator/src/parser.rs

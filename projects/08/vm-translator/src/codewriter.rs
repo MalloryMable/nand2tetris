@@ -235,7 +235,8 @@ impl CodeWriter {
         self.deref()?;
         // writeln!(self.writer, "AM=M+1")?;
         self.write()?; // M=D (Saves data to the top of the stack)
-        writeln!(self.writer, "A=M+1")
+        self.at_stack_pointer()?;
+        writeln!(self.writer, "M=M+1")
     }
 
     fn at_segment(&mut self, seg: Segment) -> io::Result<()> {
