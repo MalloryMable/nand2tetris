@@ -42,7 +42,16 @@ fn main() {
         process::exit(1);
     }
 
-    // I could check for the first directory but the reward is so marginal
+    let contains_sys = source_files.iter().any(|path| {
+        path.file_name()
+            .and_then(|name| name.to_str())
+            == Some("Sys.vm")
+    });
+
+    if !contains_sys {
+        println!("\x1b[33mWarning: VM does not contain a Sys.vm file\x1b[0m");
+    }
+
     let first_input = &cli.input[0];
     let output_path = resolve_output_path(first_input, cli.output);
     match process_files(&source_files, &output_path) {
