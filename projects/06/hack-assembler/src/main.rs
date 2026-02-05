@@ -1,29 +1,63 @@
-use std::env;
+use clap::{Parser, ValueHint};
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process;
 
 mod parser;
 mod symboltable;
 mod code;
 
-use parser::{Command, Parser};
+use parser::{Command, Parser as AsmParser};
 use symboltable::SymbolTable;
 
+#[derive(Parser)]
+#[command(version, name = "Hack Assembler")]
+#[command(about = "Compiles hack assembly(.asm) to binary (.hack)")]
+struct Cli {
+    #[arg(value_hint= ValueHint::FilePath)]
+    #[arg(value_parser = validate_asm)] // Custom hook
+    input: PathBuf,
+
+    #[arg(value_hint= ValueHint::FilePath)]
+    output: Option<PathBuf>,
+}
+
+fn validate_asm(s: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(s);
+    if path.extension().and_then(|ext| ext.to_str()) == Some("asm") {
+        Ok(path)
+    } else {
+        Err(format!("Input file '{}' must have an .asm extension.", path.display()))
+    }
+}
+
+
 fn main() {
-    let (input_path, output_path) = match parse_config() {
-        Ok(paths) => paths,
-        Err(e) => {
-            eprintln!("{}", e);
-            process::exit(1);
+    let cli = Cli::parse();
+    let output_path = match cli.output {
+        Some(path) => {
+            if path.is_dir() {
+                let stem = cli.input.file_stem().expect("Input file must have a filename");
+                path.join(stem).with_extension("hack")
+            } else {
+                if path.extension().and_then(|s| s.to_str()) != Some("hack") {
+                     eprintln!("Error: Output file must have .hack extension");
+                     process::exit(1);
+                }
+                path
+            }
+        },
+        None => {
+            let stem = cli.input.file_stem().expect("Input file must have a filename");
+            cli.input.with_file_name(stem).with_extension("hack")
         }
     };
 
-    let parser = match Parser::new(&input_path) {
+    let parser = match AsmParser::new(&cli.input) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("Error opening file '{}': {}", input_path.display(), e);
+            eprintln!("Error opening file '{}': {}", cli.input.display(), e);
             process::exit(1);
         }
     };
@@ -94,38 +128,5 @@ fn main() {
     }
 
     print!("Succesfully complied to: {}", output_path.display());
-}
-
-// This takes in a simple CLI argument
-fn parse_config() -> Result<(PathBuf, PathBuf), String> {
-    let args: Vec<String> = env::args().collect();
-
-    if args.len() < 2 {
-        return Err("Error: No arguments passed. Usage: <input.asm> [dest]".to_string());
-    }
-
-    let input_path = Path::new(&args[1]);
-
-    if input_path.extension().and_then(|s| s.to_str()) != Some("asm") {
-        return Err(format!("Error: Input file '{}' must have an .asm extension.", input_path.display()))
-    }
-
-    let output_path = if args.len() > 2 {
-        let dest_arg = Path::new(&args[2]);
-
-        if dest_arg.is_dir() {
-            let stem = input_path.file_stem().ok_or("input file has no name(?)")?;
-            dest_arg.join(stem).with_extension("hack")
-        } else if dest_arg.extension().and_then(|s| s.to_str()) == Some("hack") {
-            dest_arg.to_path_buf()
-        } else {
-            return Err(format!("Error: Destination '{}' is invalid. Usage: <input.asm> [dest]", dest_arg.display()))
-        }
-    } else {
-        let stem = input_path.file_stem().ok_or("Input file has no name")?;
-        Path::new(".").join(stem).with_extension("hack")
-    };
-
-    Ok((input_path.to_path_buf(), output_path))
 }
 
