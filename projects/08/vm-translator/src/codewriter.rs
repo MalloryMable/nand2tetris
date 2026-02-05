@@ -43,21 +43,20 @@ impl CodeWriter {
     }
 
     fn arithmetic(&mut self, math: Math) -> io::Result<()> {
-        self.stack_peak()?; // [@SP, A=M-1] (Moves to filled slot)
         match math {
             Math::Neg(op) => {
+                self.stack_peak()?;
                 match op {
                     Neg::Not => writeln!(self.writer, "M=!M")?,
                     Neg::Neg => writeln!(self.writer, "M=-M")?,
                 }
             },
             Math::Bin(op) => {
-                self.read()?; // D=M (Pop top value) (Save 'y' ->D)
-                self.stack_pop()?; // [@SP, AM=M-1] (pop 'y')
-                self.peak()?; // A=M-1 ("peak" at address of second value)
+                self.stack_pop_read()?; // [@SP, AM=M-1] (pop 'y')
+                self.peak()?; // A=A-1 ("peak" at address of second value)
 
                 match op { // Notice we preform this in place
-                    Bin::Add => writeln!(self.writer, "M=M+D")?,
+                    Bin::Add => writeln!(self.writer, "M=D+M")?,
                     Bin::Sub => writeln!(self.writer, "M=M-D")?,
                     Bin::And => writeln!(self.writer, "M=M&D")?,
                     Bin::Or  => writeln!(self.writer, "M=M|D")?,
@@ -111,7 +110,7 @@ impl CodeWriter {
 
     fn pop(&mut self, seg: Segment, index: u32) -> io::Result<()> {
         match seg {
-            Segment::Constant => panic!("Cannot pop constant"),
+            Segment::Constant => Err(io::Error::other("Cannot pop constant")),
             Segment::Local | Segment::Argument | Segment::This | Segment::That => {
                 // Address = Base + Index
                 self.at_segment(seg)?;
@@ -128,27 +127,26 @@ impl CodeWriter {
                 // Write D to *R13
                 self.at_rtrn_pointer()?;
                 self.deref()?;
-                self.write()?;
+                return self.write();
             },
 
             Segment::Static => {
                 self.stack_pop_read()?;
                 self.at(&format!("{}.{}", self.current_file, index))?;
-                self.write()?;
+                return self.write();
             },
             Segment::Temp => {
                 self.stack_pop_read()?;
                 self.at(&format!("{}", 5 + index))?;
-                writeln!(self.writer, "M=D")?;
+                return self.write();
             },
             Segment::Pointer => {
                 self.stack_pop_read()?;
                 let register = if index == 0 { "THIS" } else { "THAT" };
                 self.at(register)?;
-                writeln!(self.writer, "M=D")?;
+                return self.write();
             },
         }
-        Ok(())
     }
 
     fn label (&mut self, label: &str) -> io::Result<()> {
@@ -168,7 +166,7 @@ impl CodeWriter {
 
     fn function(&mut self, function: &str,n_vars: u32) -> io::Result<()> {
         self.current_function = function.to_string();
-        writeln!(self.writer, "({}.{})", self.current_file, function)?;
+        writeln!(self.writer, "({})", function)?;
 
         for _ in 0..n_vars {
             self.cache_const(0)?;
@@ -178,17 +176,14 @@ impl CodeWriter {
 
     }
 
-    fn call(&mut self, called_function: &str, n_args: u32) -> io::Result<()> {
-        let function = if called_function.contains('.') { called_function.to_string() } else {
-            format!("{}.{}", self.current_file, called_function)
-        };
+    fn call(&mut self, function: &str, n_args: u32) -> io::Result<()> {
 
         let label = self.internal_label("RTRN_CALL");
 
         self.cache_const(n_args)?; //[@{n_args}, D=A]
         self.at_frame_pointer()?;
         self.write()?; // M=D
-        self.at( &function)?;
+        self.at(function)?;
         self.cache_pointer()?; // A=D
         self.at_rtrn_pointer()?;
         self.write()?; // M=D
@@ -214,7 +209,7 @@ impl CodeWriter {
     fn at_comp_pointer(&mut self) -> io::Result<()> { writeln!(self.writer, "@R15") }
     fn at(&mut self, addr: &str) -> io::Result<()> { writeln!(self.writer, "@{}", addr) }
     fn deref(&mut self) -> io::Result<()> { writeln!(self.writer, "A=M") } // Follow pointer
-    fn peak(&mut self) -> io::Result<()> { writeln!(self.writer, "A=M-1") }
+    fn peak(&mut self) -> io::Result<()> { writeln!(self.writer, "A=A-1") }
     fn jump(&mut self) -> io::Result<()> { writeln!(self.writer, "0;JMP") } // Unconditional jump
     fn cache_pointer(&mut self) -> io::Result<()> { writeln!(self.writer, "D=A") }
     fn read(&mut self) -> io::Result<()> { writeln!(self.writer, "D=M") }
@@ -222,7 +217,7 @@ impl CodeWriter {
 
     fn stack_peak(&mut self) -> io::Result<()> {
         self.at_stack_pointer()?; // @SP
-        self.peak() // A=M-1
+        writeln!(self.writer, "A=M-1") // We haven't dereferenced yet
     }
 
     fn stack_pop(&mut self) -> io::Result<()> {
@@ -237,10 +232,10 @@ impl CodeWriter {
 
     fn stack_push(&mut self) -> io::Result<()> {
         self.at_stack_pointer()?; // @SP
-        self.deref()?; // A=M (This is the only time we go straight to the empty register)
+        self.deref()?;
+        // writeln!(self.writer, "AM=M+1")?;
         self.write()?; // M=D (Saves data to the top of the stack)
-        self.at_stack_pointer()?; // Back to SP
-        writeln!(self.writer, "M=M+1") // Pointed to the new empty position
+        writeln!(self.writer, "A=M+1")
     }
 
     fn at_segment(&mut self, seg: Segment) -> io::Result<()> {
@@ -254,7 +249,7 @@ impl CodeWriter {
     }
 
     fn external_label(&self, label: &str ) -> String {
-         format!("{}.{}${}", self.current_file, self.current_function, label)
+         format!("{}${}", self.current_function, label)
     }
 
     // Internal label writing to avoid name collision
@@ -266,7 +261,7 @@ impl CodeWriter {
         label
     }
 
-    fn init(&mut self) -> io::Result<()> {
+    pub fn init(&mut self) -> io::Result<()> {
 
         // STACK INIT
         self.cache_const(256)?;
@@ -308,52 +303,50 @@ impl CodeWriter {
         self.at_segment(Segment::Local)?;
         writeln!(self.writer, "A=M-D")?; // LCL-5 is our new address
         self.read()?;
-        self.at_rtrn_pointer()?; // Return address is set here
+        self.at_frame_pointer()?; // Return address is set here
         self.write()?;
 
         self.stack_pop_read()?;
         self.at_segment(Segment::Argument)?;
         self.deref()?; // A=M
         self.write()?; // Saves top of stack to arg
+        self.cache_pointer()?;
 
-        self.cache_pointer()?; // Saves a pointer to Arg
+        // Passes saved arg
         self.at_stack_pointer()?;
         writeln!(self.writer, "M=D+1")?; // Put the next viable arg register on the stack
 
         // Updates the frame pointer from local
         self.at_segment(Segment::Local)?;
         self.read()?;
-        self.at_frame_pointer()?;
-        writeln!(self.writer, "AM=D-1")?; // R14=LCL-1
-        self.read()?;
 
         // Restores each segment from frame
         self.frame_pop(Segment::That)?;
         self.frame_pop(Segment::This)?;
         self.frame_pop(Segment::Argument)?;
+        self.frame_pop(Segment::Local)?;
 
-        // Updates local
-        self.at_segment(Segment::Local)?;
-        self.write()?;
-
-        // Jump to return address
-        self.at_rtrn_pointer()?;
+        // Jump out of frame
+        self.at_frame_pointer()?; // R13
         self.deref()?;
         self.jump()?;
 
         // CALL
         writeln!(self.writer, "(ENTER_CALL)")?;
-        // Pushes return address to top of stack
+        // Pushes return address to top of stack without incrementing
+        self.at_stack_pointer()?;
+        self.deref()?;
+        self.write()?;
 
         self.frame_stack_push(Segment::Local)?;
         self.frame_stack_push(Segment::Argument)?;
         self.frame_stack_push(Segment::This)?;
         self.frame_stack_push(Segment::That)?;
 
-        // ARG = SP - (n_args + 4)
+        // ARG = SP - (n_args + 4) (SP is already 1 behind from not icrementing)
         self.cache_const(4)?;
-        self.at_rtrn_pointer()?;
-        writeln!(self.writer, "D=M+D")?;
+        self.at_frame_pointer()?; // R13
+        writeln!(self.writer, "D=D+M")?;
         self.at_stack_pointer()?;
         writeln!(self.writer, "D=M-D")?;
         self.at_segment(Segment::Argument)?;
@@ -365,20 +358,21 @@ impl CodeWriter {
         self.at_segment(Segment::Local)?;
         self.write()?;
 
-        // Jump to stored function address
-        self.at_frame_pointer()?;
+        // Jump to return address
+        self.at_rtrn_pointer()?;
         self.deref()?;
         self.jump()?;
-        writeln!(self.writer, "(BOOTED)")
+        writeln!(self.writer, "(BOOTED)")?;
+        self.call("Sys.init", 0)
     }
 
     // -- INIT specific helper functions --
 
     fn enter_macro(&mut self) -> io::Result<()> {
-        self.at_comp_pointer()?;
+        self.at_comp_pointer()?; // R15
         self.write()?; // M=D
         self.stack_pop_read()?; // [@SP, AM=M-1, D=M] //NOTE: Can we make this DAM=M-1
-        self.peak()?; // A=M-1
+        self.peak()?; // A=A-1 // writeln!(self.writer, "A=A-1")?;
         writeln!(self.writer, "D=M-D")?; // Saves the comparison
         writeln!(self.writer, "M=0") // Assume false
     }
@@ -395,11 +389,11 @@ impl CodeWriter {
     }
 
     fn frame_pop(&mut self, segment: Segment) -> io::Result<()> {
+        self.at_rtrn_pointer()?; // R14
+        writeln!(self.writer, "AM=D-1")?; // Pop last segment
+        self.read()?;
         self.at_segment(segment)?;
-        self.write()?;
-        self.at_frame_pointer()?; // Call target address
-        writeln!(self.writer, "AM=M-1")?; // Pop last segment
-        self.read()
+        self.write()
     }
 
     fn frame_stack_push(&mut self, segment: Segment) -> io::Result<()> {

@@ -5,11 +5,8 @@ use std::path::Path;
 
 #[derive(Debug, Clone)]
 pub enum Command {
-    // Address: "@sum" -> "sum"
     A(String),
-    // Command: Holds (dest, comp, jump) Strings
     C(Option<String>, String, Option<String>),
-    // Label: Marks a specific line of byte code to jump to: "(LOOP)" -> LOOP
     L(String)
 }
 
@@ -22,9 +19,6 @@ impl Parser {
         let file = File::open(file_path)?; // We already confirmed it existed
         let reader = BufReader::new(file);
 
-        // This lets us not *actually* do any of this until it maters while taking this implicit
-        // logic back to the main assembler so from the perspective of the assembler it gets a box
-        // that spits out enumerations consistently
         let iter = reader.lines()
             .map_while(Result::ok)
             .map(|line| {

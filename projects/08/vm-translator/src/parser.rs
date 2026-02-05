@@ -2,8 +2,6 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
-//TODO: change u32 to u16 since this is translating down to a specific known 16x CPU
-#[derive(Clone)]
 pub enum Cmd {
     // Actual computation/math opperations
     Math(Math),
@@ -23,7 +21,6 @@ pub enum Cmd {
     Call(String, u32), // function name nArgs
 }
 
-#[derive(Clone)]
 pub enum Segment {
     Argument, // Dynamically alocated
     Local, // Dynamically alocated
@@ -35,20 +32,17 @@ pub enum Segment {
     Temp, // ..8
 }
 
-#[derive(Clone)]
 pub enum Math {
     Neg(Neg), // Negating commands
     Bin(Bin), // Binary opperations
     Comp(Comp), // Comparions opperations
 }
 
-#[derive(Clone)]
 pub enum Neg { // Recall from software defintion that -M and !M are not equal
     Not,
     Neg,
 }
 
-#[derive(Clone)]
 pub enum Bin {
     Add,
     Sub,
@@ -56,16 +50,16 @@ pub enum Bin {
     Or,
 }
 
-#[derive(Clone)]
 pub enum Comp {
     Eq,
     Gt,
     Lt,
 }
 
-// NOTE: enums finish here
 pub struct Parser {
     lines: io::Lines<BufReader<File>>,
+    line_number: usize,
+    error: Option<String>,
 }
 
 impl Parser {
@@ -73,17 +67,95 @@ impl Parser {
         let file = File::open(file_path)?;
         Ok(Parser {
             lines: BufReader::new(file).lines(),
+            line_number: 0,
+            error: None,
         })
     }
+
+    pub fn get_error(&self) -> Option<&String> {
+        self.error.as_ref()
+    }
+
+    fn parse_line(&self, command_word: &str, mut parts: std::str::SplitWhitespace) -> Result<Cmd, String> {
+        match command_word.to_lowercase().as_str() {
+            // # Mathutation
+            // ## Negation of what is stored in Memory
+            "not" => Ok(Cmd::Math(Math::Neg(Neg::Not))), // M=!M
+            "neg" => Ok(Cmd::Math(Math::Neg(Neg::Neg))), // M=-M
+            // ## Binary applies Data to Memory then stores in Memory
+            "add" => Ok(Cmd::Math(Math::Bin(Bin::Add))), // M=M+D
+            "sub" => Ok(Cmd::Math(Math::Bin(Bin::Sub))), // M=M-D
+            "and" => Ok(Cmd::Math(Math::Bin(Bin::And))), // M=M&D
+            "or"  => Ok(Cmd::Math(Math::Bin(Bin::Or))),  // M=M|D
+            // ## Comparions subtacts stored Data from the target in Memory
+            //    Always runs D=M-D and prints a label
+            "eq" => Ok(Cmd::Math(Math::Comp(Comp::Eq))), // D;JEQ
+            "gt" => Ok(Cmd::Math(Math::Comp(Comp::Gt))), // D;JGT
+            "lt" => Ok(Cmd::Math(Math::Comp(Comp::Lt))), // D;JLT
+
+            // # Push/Pop
+            "push" => {
+                let seg = parts.next().ok_or("Missing segment argument")?;
+                let idx_str = parts.next().ok_or("Missing index argument")?;
+                let idx = idx_str.parse::<u32>().map_err(|_| "Invalid index number")?;
+
+                let (segment, offset) = define_segment(seg, idx)?;
+                Ok(Cmd::Push(segment, offset))
+            },
+            "pop" => {
+                let seg = parts.next().ok_or("Missing segment argument")?;
+                let idx_str = parts.next().ok_or("Missing index argument")?;
+                let idx = idx_str.parse::<u32>().map_err(|_| "Invalid index number")?;
+
+                let (segment, offset) = define_segment(seg, idx)?;
+                Ok(Cmd::Pop(segment, offset))
+            },
+
+            "label" => Ok(Cmd::Label(parts.next().ok_or("Missing label name")?.to_string())),
+            "goto"  => Ok(Cmd::Goto(parts.next().ok_or("Missing goto label")?.to_string())),
+            "if-goto"  => Ok(Cmd::If(parts.next().ok_or("Missing if-goto label")?.to_string())),
+
+            "function" => {
+                let name = parts.next().ok_or("Missing function name")?.to_string();
+                let vars = parts.next().ok_or("Missing var count")?
+                                .parse::<u32>().map_err(|_| "Invalid var count")?;
+                Ok(Cmd::Function(name, vars))
+            },
+            "call" => {
+                let name = parts.next().ok_or("Missing function name")?.to_string();
+                let args = parts.next().ok_or("Missing arg count")?
+                                .parse::<u32>().map_err(|_| "Invalid arg count")?;
+                Ok(Cmd::Call(name, args))
+            },
+            "return" => Ok(Cmd::Return),
+
+            // Unknown command?
+            _ => Err(format!("Unknown command: {}", command_word)),
+        }
+    }
+
 }
 
 impl Iterator for Parser  {
-    type Item = Cmd;
+   type Item = Cmd;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // If we previously hit an error we stop immediately
+        if self.error.is_some() {
+            return None;
+        }
+
         // Loop until a command or EOF
         while let Some(line_result) = self.lines.next() {
-            let line = line_result.ok()?;
+            self.line_number += 1;
+
+            let line = match line_result {
+                Ok(l) => l,
+                Err(e) => {
+                    self.error = Some(format!("IO Error: {}", e));
+                    return None;
+                }
+            };
 
             // Strip comments
             let content = match line.find("//") {
@@ -100,103 +172,49 @@ impl Iterator for Parser  {
                 None => continue, // empty line, skip
             };
 
-            // Here we define the control flow we will feed to the writer
-            return match command_word.to_lowercase().as_str() { // no risk of collision for commands
-                // # Mathutation
-                // ## Negation of what is stored in Memory
-                "not" => Some(Cmd::Math(Math::Neg(Neg::Not))), // M=!M
-                "neg" => Some(Cmd::Math(Math::Neg(Neg::Neg))), // M=-M
-                // ## Binary applies Data to Memory then stores in Memory
-                "add" => Some(Cmd::Math(Math::Bin(Bin::Add))), // M=M+D
-                "sub" => Some(Cmd::Math(Math::Bin(Bin::Sub))), // M=M-D
-                "and" => Some(Cmd::Math(Math::Bin(Bin::And))), // M=M&D
-                "or"  => Some(Cmd::Math(Math::Bin(Bin::Or))),  // M=M|D
-                // ## Comparions subtacts stored Data from the target in Memory
-                //    Always runs D=M-D and prints a label
-                "eq" => Some(Cmd::Math(Math::Comp(Comp::Eq))), // D;JEQ
-                "gt" => Some(Cmd::Math(Math::Comp(Comp::Gt))), // D;JGT
-                "lt" => Some(Cmd::Math(Math::Comp(Comp::Lt))), // D;JLT
-                // # Push/Pop
-                "push" => {
-                    let (segment, offset) = define_segment(
-                    parts.next()?,
-                    parts.next()?.parse::<u32>().ok()?);
-
-                    return Some(Cmd::Push(segment, offset));
-                },
-                "pop" => {
-                    let (segment, offset) = define_segment(
-                    parts.next()?,
-                    parts.next()?.parse::<u32>().ok()?);
-
-                    return Some(Cmd::Pop(segment, offset));
-                },
-                "label" => Some(Cmd::Label(parts.next()?.to_string())),
-                "goto"  => Some(Cmd::Goto(parts.next()?.to_string())),
-                "if-goto"  => Some(Cmd::If(parts.next()?.to_string())),
-                "function" =>  Some(Cmd::Function(
-                        parts.next()?.to_string(),
-                        parts.next()?.parse::<u32>().ok()?)),
-
-                "call" =>  Some(Cmd::Call(
-                        parts.next()?.to_string(),
-                        parts.next()?.parse::<u32>().ok()?)),
-                "return" => return Some(Cmd::Return),
-
-                // Unknown command?
-                _ => panic!("Unknown command: {}", command_word),
-            };
+            // Try to parse using the helper
+            match self.parse_line(command_word, parts) {
+                Ok(cmd) => return Some(cmd),
+                Err(msg) => {
+                    self.error = Some(format!("Line {}: {}", self.line_number, msg));
+                    return None;
+                }
+            }
         }
         None
     }
 }
 
-fn define_segment(segment: &str, offset: u32) -> (Segment, u32) {
+fn define_segment(segment: &str, offset: u32) -> Result<(Segment, u32), String> {
     match segment.to_lowercase().as_str() {
-        "argument" => (Segment::Argument, offset),
-        "local" => (Segment::Local, offset),
+        "argument" => Ok((Segment::Argument, offset)),
+        "local" => Ok((Segment::Local, offset)),
         "static" => {
             if offset > 239 {
-                panic!("Static offset out of bounds: {}", offset)
+                return Err(format!("Static offset out of bounds: {}", offset));
             }
-            (Segment::Static, offset)
+            Ok((Segment::Static, offset))
         },
         "constant" => {
             if offset > 32768 {
-                panic!("Overflow exception")
+                return Err("Overflow exception".to_string());
             }
-
-            (Segment::Constant, offset)
+            Ok((Segment::Constant, offset))
         },
-        "this" => {
-            if offset > 1 {
-                panic!("Out of bounds this offset: {}", offset)
-            }
-
-            (Segment::This, offset)
-        },
-        "that" => {
-            if offset != 0 {
-                panic!("Overflow exception: That can only hold 1 pointer")
-            }
-
-            (Segment::That, offset)
-        },
+        "this" =>  Ok((Segment::This, offset)),
+        "that" =>  Ok((Segment::That, offset)),
         "pointer" => {
             if offset > 1 {
-                panic!("Pointer cache overflow")
+                return Err("Pointer cache overflow".to_string());
             }
-
-            (Segment::Pointer, offset)
+            Ok((Segment::Pointer, offset))
         },
         "temp" => {
             if offset > 8 {
-                panic!("Overflow exception")
+                return Err("Overflow exception".to_string());
             }
-
-            (Segment::Temp, offset)
+            Ok((Segment::Temp, offset))
         },
-        _ => panic!("Invalid segment name: '{}'", segment.to_string())
+        _ => Err(format!("Invalid segment name: '{}'", segment))
     }
 }
-
