@@ -262,6 +262,11 @@ impl CodeWriter {
         label
     }
 
+    fn cache_const(&mut self, val: u32) -> io::Result<()> {
+        self.at(format!("{}", val).as_str())?;
+        self.cache_pointer()
+    }
+
     pub fn init(&mut self) -> io::Result<()> {
 
         // STACK INIT
@@ -271,7 +276,16 @@ impl CodeWriter {
         self.at("BOOTED")?;
         self.jump()?;
 
-        // COMPARISON
+        self.init_comp_macros()?;
+        self.init_return()?;
+        self.init_call()?;
+        writeln!(self.writer, "(BOOTED)")?;
+        self.call("Sys.init", 0)
+    }
+
+    // -- INIT specific helper functions --
+    // ---- COMP block ----
+    fn init_comp_macros(&mut self) -> io::Result<()> {
         // EQ
         writeln!(self.writer, "(ENTER_EQ)")?;
         self.enter_macro()?;
@@ -295,9 +309,32 @@ impl CodeWriter {
         writeln!(self.writer, "D;JGE")?; // Jumps if a-b >= 0
         self.comp_true()?;
         writeln!(self.writer, "(END_LT)")?;
-        self.exit_macro()?;
+        self.exit_macro()
 
-        // RETURN STATEMENT
+    }
+
+    fn enter_macro(&mut self) -> io::Result<()> {
+        self.at_comp_pointer()?; // R15
+        self.write()?; // M=D
+        self.stack_pop_read()?; // [@SP, AM=M-1, D=M] //NOTE: Can we make this DAM=M-1
+        self.peak()?; // A=A-1 // writeln!(self.writer, "A=A-1")?;
+        writeln!(self.writer, "D=M-D")?; // Saves the comparison
+        writeln!(self.writer, "M=0") // Assume false
+    }
+
+    fn comp_true(&mut self) -> io::Result<()> {
+        self.stack_peak()?; // [@SP, A=M-1] (change in place)
+        writeln!(self.writer, "M=-1") // Set true
+    }
+
+    fn exit_macro(&mut self) -> io::Result<()> {
+        self.at_comp_pointer()?;
+        self.deref()?; // A=M
+        self.jump() // 0;JMP
+    }
+
+    // ---- RETURN block ----
+    fn init_return(&mut self) -> io::Result<()> {
         writeln!(self.writer, "(ENTER_RTRN)")?;
         // Saves *(*Local-5) to the return register
         self.cache_const(5)?;
@@ -330,9 +367,19 @@ impl CodeWriter {
         // Jump out of frame
         self.at_frame_pointer()?; // R13
         self.deref()?;
-        self.jump()?;
+        self.jump()
+    }
 
-        // CALL
+    fn frame_pop(&mut self, segment: Segment) -> io::Result<()> {
+        self.at_rtrn_pointer()?; // R14
+        writeln!(self.writer, "AM=D-1")?; // Pop last segment
+        self.read()?;
+        self.at_segment(segment)?;
+        self.write()
+    }
+
+    // ---- CALL block ----
+    fn init_call(&mut self) -> io::Result<()> {
         writeln!(self.writer, "(ENTER_CALL)")?;
         // Pushes return address to top of stack without incrementing
         self.at_stack_pointer()?;
@@ -362,39 +409,7 @@ impl CodeWriter {
         // Jump to return address
         self.at_rtrn_pointer()?;
         self.deref()?;
-        self.jump()?;
-        writeln!(self.writer, "(BOOTED)")?;
-        self.call("Sys.init", 0)
-    }
-
-    // -- INIT specific helper functions --
-
-    fn enter_macro(&mut self) -> io::Result<()> {
-        self.at_comp_pointer()?; // R15
-        self.write()?; // M=D
-        self.stack_pop_read()?; // [@SP, AM=M-1, D=M] //NOTE: Can we make this DAM=M-1
-        self.peak()?; // A=A-1 // writeln!(self.writer, "A=A-1")?;
-        writeln!(self.writer, "D=M-D")?; // Saves the comparison
-        writeln!(self.writer, "M=0") // Assume false
-    }
-
-    fn comp_true(&mut self) -> io::Result<()> {
-        self.stack_peak()?; // [@SP, A=M-1] (change in place)
-        writeln!(self.writer, "M=-1") // Set true
-    }
-
-    fn exit_macro(&mut self) -> io::Result<()> {
-        self.at_comp_pointer()?;
-        self.deref()?; // A=M
-        self.jump() // 0;JMP
-    }
-
-    fn frame_pop(&mut self, segment: Segment) -> io::Result<()> {
-        self.at_rtrn_pointer()?; // R14
-        writeln!(self.writer, "AM=D-1")?; // Pop last segment
-        self.read()?;
-        self.at_segment(segment)?;
-        self.write()
+        self.jump()
     }
 
     fn frame_stack_push(&mut self, segment: Segment) -> io::Result<()> {
@@ -403,8 +418,4 @@ impl CodeWriter {
         self.stack_push()
     }
 
-    fn cache_const(&mut self, val: u32) -> io::Result<()> {
-        self.at(format!("{}", val).as_str())?;
-        self.cache_pointer()
-    }
 }
