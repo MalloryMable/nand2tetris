@@ -1,6 +1,5 @@
 use std::iter::Peekable;
 use std::str::Chars;
-use std::fmt;
 
 // Define toekns
 #[derive(Debug, Clone, PartialEq)]
