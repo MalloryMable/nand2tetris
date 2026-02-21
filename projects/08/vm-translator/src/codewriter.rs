@@ -8,7 +8,6 @@ use crate::parser::{Cmd, Segment, Math, Neg, Bin, Comp};
 pub struct CodeWriter {
     writer: BufWriter<File>,
     current_file: String,
-    current_function: String,
     label_map: HashMap<String, u32>,
 }
 
@@ -18,7 +17,6 @@ impl CodeWriter {
         Ok(CodeWriter {
             writer: BufWriter::new(file),
             current_file: "Sys".to_string(), // Default until set_file_name is called
-            current_function: "init".to_string(),
             label_map: HashMap::new(),
         })
     }
@@ -165,7 +163,6 @@ impl CodeWriter {
     }
 
     fn function(&mut self, function: &str,n_vars: u32) -> io::Result<()> {
-        self.current_function = function.to_string();
         writeln!(self.writer, "({})", function)?;
 
         for _ in 0..n_vars {
@@ -250,7 +247,7 @@ impl CodeWriter {
     }
 
     fn external_label(&self, label: &str ) -> String {
-         format!("{}${}", self.current_function, label)
+         format!("{}${}", self.current_file, label)
     }
 
     // Internal label writing to avoid name collision
