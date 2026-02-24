@@ -62,7 +62,8 @@ impl<'a> JackTokenizer<'a> {
             }
         }
 
-        match val.parse::<i16>() {
+        match val.parse::<usize>() {
+            //TODO: Also check explicitly if the parsed int is <= 32767 because of how ints are held
             Ok(n) => Ok(Token { value: TokenType::IntConst(n), line }),
             Err(_) => Err(format!("{}: Int constant too large (must be <= 32767)", line)),
         }
