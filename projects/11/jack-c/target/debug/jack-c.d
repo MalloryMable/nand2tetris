@@ -1,0 +1,1 @@
+/home/mallory/git-repos/nand2tetris/projects/11/jack-c/target/debug/jack-c: /home/mallory/git-repos/nand2tetris/projects/11/jack-c/src/main.rs /home/mallory/git-repos/nand2tetris/projects/11/jack-c/src/tokenizer.rs
