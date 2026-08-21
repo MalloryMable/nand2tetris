@@ -1,7 +1,6 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use crate::tokens::Primitive;
-use crate::registry::ClassInfo;
+use crate::tokens::{Primitive, Scope};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeDescriptor {
@@ -12,7 +11,7 @@ pub enum TypeDescriptor {
 #[derive(Debug, Clone)]
 struct Symbol {
     type_desc: TypeDescriptor,
-    segment: Segment,
+    scope: Scope,
     index: usize,
 }
 
@@ -35,12 +34,12 @@ impl SymbolTable {
         }
     }
 
-    pub fn define(&mut self, name: &str, type_desc: TypeDescriptor, segment: Segment) {
-        let index = match segment {
-            Segment::Static => { self.static_count += 1; self.static_count - 1 }
-            Segment::Local => { self.local_count += 1;  self.local_count - 1 }
-            Segment::Arg => { self.arg_count += 1;    self.arg_count - 1 }
-            Segment::This => { self.field_count += 1;   self.field_count - 1 }
+    pub fn define(&mut self, name: &str, type_desc: TypeDescriptor, scope: Scope) {
+        let index = match scope {
+            Scope::Static => { self.static_count += 1; self.static_count - 1 }
+            Scope::Local => { self.local_count += 1;  self.local_count - 1 }
+            Scope::Arg => { self.arg_count += 1;    self.arg_count - 1 }
+            Scope::This => { self.field_count += 1;   self.field_count - 1 }
         };
 
         // If we define a variable of type Class, we must Request that class
@@ -48,11 +47,11 @@ impl SymbolTable {
             self.request_class(class_name);
         }
 
-        self.table.insert(name.to_string(), Symbol { type_desc, segment, index });
+        self.table.insert(name.to_string(), Symbol { type_desc, scope, index });
 
     }
     pub fn flush_subroutine(&mut self) {
-        self.table.retain(|_, sym| sym.segment != Segment::Arg && sym.segment != Segment::This);
+        self.table.retain(|_, sym| sym.scope != Scope::Arg && sym.scope != Scope::This);
         self.arg_count = 0;
         self.field_count = 0;
     }
@@ -62,8 +61,8 @@ impl SymbolTable {
         self.table.get(name).map(|s| s.index)
     }
 
-    pub fn kind_of(&self, name: &str) -> Option<Segment> {
-        self.table.get(name).map(|s| s.segment)
+    pub fn kind_of(&self, name: &str) -> Option<Scope> {
+        self.table.get(name).map(|s| s.scope)
     }
 
     pub fn type_of(&self, name: &str) -> Option<&TypeDescriptor> {

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 
 /// Tracks the state of a specific method
 #[derive(Debug, Clone)]
@@ -27,7 +28,7 @@ impl MethodInfo {
 
 /// Tracks the state of a class and its member methods
 #[derive(Debug, Clone)]
-struct ClassInfo {
+pub struct ClassInfo {
     is_defined: bool,
     methods: HashMap<String, MethodInfo>,
 }

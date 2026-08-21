@@ -210,7 +210,7 @@ fn define_segment(segment: &str, offset: u32) -> Result<(Segment, u32), String> 
             Ok((Segment::Pointer, offset))
         },
         "temp" => {
-            if offset > 8 {
+            if offset > 7 {
                 return Err("Overflow exception".to_string());
             }
             Ok((Segment::Temp, offset))

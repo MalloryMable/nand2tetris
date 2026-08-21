@@ -354,6 +354,8 @@ impl CodeWriter {
         // Updates the frame pointer from local
         self.at_segment(Segment::Local)?;
         self.read()?;
+        self.at_rtrn_pointer()?; // @R14
+        self.write()?; // M=D (Store frame pointer in R14)
 
         // Restores each segment from frame
         self.frame_pop(Segment::That)?;
@@ -369,7 +371,7 @@ impl CodeWriter {
 
     fn frame_pop(&mut self, segment: Segment) -> io::Result<()> {
         self.at_rtrn_pointer()?; // R14
-        writeln!(self.writer, "AM=D-1")?; // Pop last segment
+        writeln!(self.writer, "AM=M-1")?; // Pop last segment
         self.read()?;
         self.at_segment(segment)?;
         self.write()
@@ -378,19 +380,18 @@ impl CodeWriter {
     // ---- CALL block ----
     fn init_call(&mut self) -> io::Result<()> {
         writeln!(self.writer, "(ENTER_CALL)")?;
-        // Pushes return address to top of stack without incrementing
-        self.at_stack_pointer()?;
-        self.deref()?;
-        self.write()?;
+
+        // Push return address (already stored in D by call method)
+        self.stack_push()?;
 
         self.frame_stack_push(Segment::Local)?;
         self.frame_stack_push(Segment::Argument)?;
         self.frame_stack_push(Segment::This)?;
         self.frame_stack_push(Segment::That)?;
 
-        // ARG = SP - (n_args + 4) (SP is already 1 behind from not icrementing)
-        self.cache_const(4)?;
-        self.at_frame_pointer()?; // R13
+        // ARG = SP - (n_args + 5)
+        self.cache_const(5)?;
+        self.at_frame_pointer()?; // R13 holds n_args
         writeln!(self.writer, "D=D+M")?;
         self.at_stack_pointer()?;
         writeln!(self.writer, "D=M-D")?;
@@ -399,12 +400,12 @@ impl CodeWriter {
 
         // LCL = SP
         self.at_stack_pointer()?;
-        writeln!(self.writer, "MD=M+1")?;
+        writeln!(self.writer, "MD=M")?; // Grab SP value (it was already incremented)
         self.at_segment(Segment::Local)?;
         self.write()?;
 
-        // Jump to return address
-        self.at_rtrn_pointer()?;
+        // Jump to target function
+        self.at_rtrn_pointer()?; // R14 holds target function label
         self.deref()?;
         self.jump()
     }

@@ -2,7 +2,7 @@ use std::iter::Peekable;
 use crate::tokenizer::JackTokenizer;
 use crate::tokens::{
     Token, TokenType, Keyword, Symbol, Delimiter, Operator,
-    Segment, Action, Routine, Const, Primitive
+    Scope, Action, Routine, Const, Primitive
 };
 use crate::symbol_table::{ TypeDescriptor, SymbolTable};
 
@@ -37,9 +37,9 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
 
         // Optional Class variable declarations
         while let Ok(token) = self.peek() {
-            if let TokenType::Segment(seg) = &token.value {
-                match seg {
-                    Segment::Static | Segment::Field => self.compile_class_var_dec()?,
+            if let TokenType::Scope(scope) = &token.value {
+                match scope {
+                    Scope::Static | Scope::Field => self.compile_class_var_dec()?,
                     _ => break,
                 }
             } else {
@@ -65,8 +65,8 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
         // Peeked and consumed as variable declaration is optional
         let token = self.advance()?;
 
-        let segment = match token.value {
-            TokenType::Segment(s) => s,
+        let scope = match token.value {
+            TokenType::Scope(s) => s,
             _ => return Err(format!("{}: Expected static or field, found '{}'", token.line, token)),
         };
 
@@ -75,7 +75,7 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
         // Vectorized: Consume "x, y, z;" and define all of them
         let names = self.expect_id_list()?;
         for name in names {
-            self.symbol_table.define(&name, &type_desc, segment.clone());
+            self.symbol_table.define(&name, type_desc, scope.clone());
         }
 
         Ok(())
@@ -93,7 +93,7 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
                     let func_name = if self.expect_id()? == self.class_name {
                         format!("{}.new", self.class_name)
                     } else {
-                        return Err(format!("{}: Constructor name must match class name"));
+                        return Err(format!("{}: Constructor name must match class name", self.class_name));
                     };
 
                     self.compile_parameter_list()?;
@@ -101,10 +101,10 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
                     self.writer.write_function(&func_name, self.symbol_table.arg_count);
 
                     // We set aside the number of required fields for the new object
-                    self.writer.write_push(Segment::Const, self.symbol_table.field_count);
+                    self.writer.write_push(Scope::Const, self.symbol_table.field_count);
                     self.writer.write_call("Memory.alloc", 1);
                     // Set the base segment for the memory alocated to the current object
-                    self.writer.write_pop(Segment::Pointer, 0); // Set 'this'
+                    self.writer.write_pop(Scope::Pointer, 0); // Set 'this'
                 },
                 Routine::Method => {
                     // return type is collected but we don't do a lot of type checking in this
@@ -114,7 +114,7 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
                     self.compile_parameter_list()?;
 
                     // Last argument we push into the frame before the function call
-                    self.writer.write_pop(Segment::Pointer, 0); // Set 'this' pointer
+                    self.writer.write_pop(Scope::Pointer, 0); // Set 'this' pointer
 
                     self.writer.write_function(&func_name,
                         1 + self.symbol_table.arg_count);
@@ -143,7 +143,8 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
 
         // Local Var Declarations
         while let Ok(token) = self.peek() {
-            if let TokenType::Segment(Segment::Var) = token.value {
+            // WARN: I don't think this is a token type anymore try "keyword"
+            if let TokenType::Scope(Scope::Var) = token.value {
                 self.compile_var_dec()?;
             } else {
                 break;
@@ -159,7 +160,7 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
     fn compile_parameter_list(&mut self) -> Result<(), String> {
         self.expect_symbol(Symbol::Delim(Delimiter::OpenParen))?;
 
-        token = self.advance()?;
+        let token = self.advance()?;
         if let TokenType::Symbol(Symbol::Delim(Delimiter::CloseParen)) = token.value {
             return Ok(());
         }
@@ -172,9 +173,9 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
             };
 
             let name = self.expect_id()?;
-            self.symbol_table.define(&name, &type_desc, Segment::Arg);
+            self.symbol_table.define(&name, type_desc, Scope::Arg);
 
-            token = self.advance()?;
+            let token = self.advance()?;
             match token.value {
                 TokenType::Symbol(Symbol::Delim(Delimiter::CloseParen)) => return Ok(()),
                 TokenType::Symbol(Symbol::Delim(Delimiter::Comma)) => {
@@ -191,7 +192,7 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
 
         // Vectorized: Consume "x, y, z;" and define all of them
         for name in self.expect_id_list()? {
-            self.symbol_table.define(&name, &type_desc, Segment::Var);
+            self.symbol_table.define(&name, type_desc, Scope::Var);
         }
 
         Ok(())
@@ -240,7 +241,7 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
                     return Ok(()); // Exit this set of statements
                 },
 
-                _ => return Err(format!("{}: Expected statement or '}', found '{}'", token.line, token)),
+                _ => return Err(format!("{}: Expected statement or '}}', found '{}'", token.line, token)),
             }
         }
     }
@@ -267,10 +268,10 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
         self.expect_symbol(Symbol::Delim(Delimiter::Semicolon))?;
 
         if is_array {
-            self.writer.write_pop(Segment::Temp, 0);    // Save Result
-            self.writer.write_pop(Segment::Pointer, 1); // Set That = Address
-            self.writer.write_push(Segment::Temp, 0);   // Restore Result
-            self.writer.write_pop(Segment::That, 0);    // Store
+            self.writer.write_pop(Scope::Temp, 0);    // Save Result
+            self.writer.write_pop(Scope::Pointer, 1); // Set That = Address
+            self.writer.write_push(Scope::Temp, 0);   // Restore Result
+            self.writer.write_pop(Scope::That, 0);    // Store
         } else {
             let kind = self.symbol_table.kind_of(&name).ok_or("Undefined var")?;
             let index = self.symbol_table.index_of(&name);
@@ -336,13 +337,13 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
     fn compile_do(&mut self) -> Result<(), String> {
         self.compile_expression()?;
         self.expect_symbol(Symbol::Delim(Delimiter::Semicolon))?;
-        self.writer.write_pop(Segment::Temp, 0); // Dump return value
+        self.writer.write_pop(Scope::Temp, 0); // Dump return value
         Ok(())
     }
 
     fn compile_return(&mut self) -> Result<(), String> {
         if let TokenType::Symbol(Symbol::Delim(Delimiter::Semicolon)) = self.peek()?.value {
-            self.writer.write_push(Segment::Const, 0);
+            self.writer.write_push(Scope::Const, 0);
         } else {
             self.compile_expression()?;
         }
@@ -380,24 +381,24 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
     fn compile_term(&mut self) -> Result<(), String> {
         let token = self.advance()?;
         match token.value {
-            TokenType::IntConst(val) => self.writer.write_push(Segment::Const, val),
+            TokenType::IntConst(val) => self.writer.write_push(Scope::Const, val),
             TokenType::StrgConst(val) => {
-                self.writer.write_push(Segment::Const, val.len());
+                self.writer.write_push(Scope::Const, val.len());
                 self.writer.write_call("String.new", 1);
                 for c in val.chars() {
-                    self.writer.write_push(Segment::Const, c as usize); // Cast char to int
+                    self.writer.write_push(Scope::Const, c as usize); // Cast char to int
                     self.writer.write_call("String.append", 2);
                 }
             },
             TokenType::Keywd(k) => match k {
                 Keyword::Const(Const::True) => {
-                    self.writer.write_push(Segment::Const, 0);
+                    self.writer.write_push(Scope::Const, 0);
                     self.writer.write_not(); // True is -1 (bitwise not of 0)
                 },
                 Keyword::Const(Const::False) | Keyword::Const(Const::Null) => {
-                    self.writer.write_push(Segment::Const, 0);
+                    self.writer.write_push(Scope::Const, 0);
                 },
-                Keyword::Const(Const::This) => self.writer.write_push(Segment::Pointer, 0),
+                Keyword::Const(Const::This) => self.writer.write_push(Scope::Pointer, 0),
                 _ => return Err(format!("{}: Expected constant, found keyword '{}'", token.line, k)),
             },
             TokenType::Symbol(Symbol::Op(op)) => {
@@ -439,13 +440,13 @@ impl<'a, W: VMWriter> CompilationEngine<'a, W> {
                 self.expect_symbol(Symbol::Delim(Delimiter::CloseBracket))?;
 
                 self.writer.write_arithmetic(Operator::Add); // Base + Index
-                self.writer.write_pop(Segment::Pointer, 1);  // Set That = Address
-                self.writer.write_push(Segment::That, 0);    // Push *Address
+                self.writer.write_pop(Scope::Pointer, 1);  // Set That = Address
+                self.writer.write_push(Scope::That, 0);    // Push *Address
             },
             // Method Call: foo() -> implicit this.foo()
             TokenType::Symbol(Symbol::Delim(Delimiter::OpenParen)) => {
                 self.advance()?; // Eat (
-                self.writer.write_push(Segment::Pointer, 0); // Push 'this'
+                self.writer.write_push(Scope::Pointer, 0); // Push 'this'
                 let n_args = self.compile_expression_list()?;
                 self.expect_symbol(Symbol::Delim(Delimiter::CloseParen))?;
 

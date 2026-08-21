@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::symbol_table::Primitive;
+// use crate::symbol_table::Primitive;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {

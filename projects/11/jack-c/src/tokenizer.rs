@@ -1,7 +1,8 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::tokens::{self, Token, TokenType, Symbol, Operator, Delimiter, Keyword, Segment};
+//NOTE: Delimiter was removed from
+use crate::tokens::{Token, TokenType, Symbol, Operator, Keyword, Scope};
 
 pub struct JackTokenizer<'a> {
     source: Peekable<Chars<'a>>,
@@ -103,8 +104,8 @@ impl<'a> JackTokenizer<'a> {
         }
 
         // Try segment (static, field, var)
-        if let Some(s) = Segment::from_str(&val) {
-            return Token { value: TokenType::Segment(s), line };
+        if let Some(s) = Scope::from_str(&val) {
+            return Token { value: TokenType::Scope(s), line };
         }
 
         // Fallback to identifier
